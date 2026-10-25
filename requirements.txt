@@ -1,0 +1,8 @@
+torch>=2.1
+numpy
+matplotlib
+seaborn
+scikit-learn
+jupyter
+# اختیاری: برای بارگذاری AG News از Hugging Face Datasets (در غیر این صورت CSV دانلود می‌شود)
+datasets
