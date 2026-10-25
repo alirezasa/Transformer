@@ -295,9 +295,9 @@ body.push(
   H("۹. نتیجه‌گیری"),
   ...A.conclusion.map(BULLET),
   H("مراجع"),
-  P("[1] A. Vaswani et al., \"Attention Is All You Need\", NeurIPS 2017.", { align: AlignmentType.LEFT }),
-  P("[2] X. Zhang, J. Zhao, Y. LeCun, \"Character-level Convolutional Networks for Text Classification\", NeurIPS 2015 (AG News).", { align: AlignmentType.LEFT }),
-  P("[3] J. Devlin et al., \"BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding\", NAACL 2019 ([CLS] token).", { align: AlignmentType.LEFT }),
+  new Paragraph({ alignment: AlignmentType.LEFT, spacing: { after: 100 }, children: [new TextRun({ text: "[1] A. Vaswani et al., \"Attention Is All You Need\", NeurIPS 2017.", font: EN_FONT, size: 22 })] }),
+  new Paragraph({ alignment: AlignmentType.LEFT, spacing: { after: 100 }, children: [new TextRun({ text: "[2] X. Zhang, J. Zhao, Y. LeCun, \"Character-level Convolutional Networks for Text Classification\", NeurIPS 2015 (AG News).", font: EN_FONT, size: 22 })] }),
+  new Paragraph({ alignment: AlignmentType.LEFT, spacing: { after: 100 }, children: [new TextRun({ text: "[3] J. Devlin et al., \"BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding\", NAACL 2019 ([CLS] token).", font: EN_FONT, size: 22 })] }),
 );
 
 // ---------- document ----------
