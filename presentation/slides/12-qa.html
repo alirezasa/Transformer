@@ -1,0 +1,24 @@
+<section id="qa" style="background:#F7F5F0;color:#16233A;font-family:'Vazirmatn', Tahoma, sans-serif;text-align:right;padding:128px 128px 160px;display:flex;flex-direction:column;gap:36px">
+<p style="font-size:24px;font-weight:700;color:#0E7C7B">&#8235;آمادگی برای پرسش</p>
+<h2 style="font-size:64px;font-weight:700;line-height:1.3">&#8235;پرسش‌های احتمالی استاد</h2>
+<div style="display:grid;grid-template-columns:repeat(2, 1fr);gap:28px">
+<div style="display:flex;flex-direction:column;gap:8px;background:#FFFFFF;border:1px solid #E2DED5;border-radius:16px;padding:28px 32px">
+<h3 style="font-size:32px;font-weight:700;line-height:1.5">&#8235;چرا تقسیم بر √d_k؟</h3>
+<p style="font-size:28px;line-height:1.7;color:#4A5568">&#8235;تا واریانس امتیازها حدود ۱ بماند و softmax اشباع نشود.</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:8px;background:#FFFFFF;border:1px solid #E2DED5;border-radius:16px;padding:28px 32px">
+<h3 style="font-size:32px;font-weight:700;line-height:1.5">&#8235;چرا LayerNorm و نه BatchNorm؟</h3>
+<p style="font-size:28px;line-height:1.7;color:#4A5568">&#8235;به اندازه‌ی batch و طول متغیر جمله‌ها وابسته نیست.</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:8px;background:#FFFFFF;border:1px solid #E2DED5;border-radius:16px;padding:28px 32px">
+<h3 style="font-size:32px;font-weight:700;line-height:1.5">&#8235;چرا contiguous قبل از view؟</h3>
+<p style="font-size:28px;line-height:1.7;color:#4A5568">&#8235;transpose فقط نما را عوض می‌کند؛ view حافظه‌ی پیوسته می‌خواهد.</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:8px;background:#FFFFFF;border:1px solid #E2DED5;border-radius:16px;padding:28px 32px">
+<h3 style="font-size:32px;font-weight:700;line-height:1.5">&#8235;از کجا معلوم ماژول آماده استفاده نشده؟</h3>
+<p style="font-size:28px;line-height:1.7;color:#4A5568">&#8235;assert روی model.modules() که هیچ ماژول ممنوعه‌ای در مدل نیست.</p>
+</div>
+</div>
+<p style="position:absolute;left:128px;bottom:64px;font-size:24px;color:#8A8F98">Transformer · AG News</p>
+<aside>این اسلاید برای آمادگی خودم است. تقسیم بر جذر d_k: ضرب داخلی دو بردار d_k بعدی واریانسی متناسب با d_k دارد؛ بدون تقسیم، softmax اشباع می‌شود و گرادیان تقریباً صفر می‌شود. LayerNorm به جای BatchNorm: LayerNorm برای هر توکن جدا و روی بعد ویژگی نرمال می‌کند، پس به اندازه‌ی batch و طول متفاوت جمله‌ها و پدینگ وابسته نیست. contiguous: بعد از transpose داده در حافظه جابه‌جا نمی‌شود و فقط ترتیب خواندن عوض می‌شود؛ view به حافظه‌ی پیوسته نیاز دارد. اثبات نبودن ماژول آماده: در سلول ساخت مدل روی همه‌ی زیرماژول‌ها حلقه می‌زنم و assert می‌کنم که هیچ‌کدام از نوع MultiheadAttention یا TransformerEncoder نیستند. چند پرسش دیگر: چرا Encoder و نه Decoder؟ چون طبقه‌بندی است و تولید متن نداریم؛ ماسک آینده هم لازم نیست و فقط ماسک پدینگ داریم. پیچیدگی توجه؟ مرتبه‌ی T به توان دو در d. تعداد پارامتر یک لایه‌ی کدگذار؟ چهار لایه‌ی خطی ۱۲۸ در ۱۲۸ برای توجه، حدود ۶۶ هزار؛ FFN حدود ۶۶ هزار؛ دو LayerNorm حدود ۵۰۰؛ روی هم حدود ۱۳۲ هزار برای هر لایه. چرا GELU؟ نرم‌تر از ReLU است و در ترنسفورمرهای جدید رایج است. چرا warmup؟ برای پایداری Post-LN در شروع آموزش.</aside>
+</section>

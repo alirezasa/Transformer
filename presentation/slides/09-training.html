@@ -1,0 +1,19 @@
+<section id="training" style="background:#F7F5F0;color:#16233A;font-family:'Vazirmatn', Tahoma, sans-serif;text-align:right;padding:128px 128px 160px;display:flex;flex-direction:column;gap:36px">
+<p style="font-size:24px;font-weight:700;color:#0E7C7B">&#8235;بخش ۴ · آموزش</p>
+<h2 style="font-size:64px;font-weight:700;line-height:1.3">&#8235;تنظیمات و حلقه‌ی آموزش</h2>
+<div style="display:flex;flex-direction:row-reverse;gap:40px;align-items:stretch">
+<table style="width:600px;font-size:28px;color:#16233A;background:#FFFFFF;border-radius:12px">
+<tr><th style="width:52%;text-align:left">مقدار</th><th style="width:48%;text-align:right">تنظیم</th></tr>
+<tr><td>AdamW, lr = 5e-4</td><td>&#8235;بهینه‌ساز</td></tr>
+<tr><td>0.01</td><td>Weight decay</td></tr>
+<tr><td>6% warmup + cosine</td><td>&#8235;زمان‌بند LR</td></tr>
+<tr><td>1.0</td><td>Grad clip</td></tr>
+<tr><td>64</td><td>Batch size</td></tr>
+<tr><td>6</td><td>&#8235;اپوک</td></tr>
+<tr><td>CrossEntropy</td><td>&#8235;تابع زیان</td></tr>
+</table>
+<p style="flex:1;font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;line-height:1.65;color:#E6EAF0;background:#16233A;border-radius:16px;padding:28px 32px;text-align:left;white-space:nowrap">def lr_lambda(step):<br>&nbsp;&nbsp;if step &lt; warmup_steps:<br>&nbsp;&nbsp;&nbsp;&nbsp;return (step + 1) / warmup_steps<br>&nbsp;&nbsp;progress = (step - warmup_steps) / (total_steps - warmup_steps)<br>&nbsp;&nbsp;return 0.5 * (1 + math.cos(math.pi * progress))<br><br># inside run_epoch (train=True)<br>logits = model(input_ids, key_mask)<br>loss = criterion(logits, labels)<br>optimizer.zero_grad()<br>loss.backward()<br>nn.utils.clip_grad_norm_(model.parameters(), 1.0)<br>optimizer.step()<br>scheduler.step()</p>
+</div>
+<p style="position:absolute;left:128px;bottom:64px;font-size:24px;color:#8A8F98">Transformer · AG News</p>
+<aside>برای آموزش از AdamW با نرخ یادگیری پنج ده‌هزارم و weight decay یک‌صدم استفاده کردم. نرخ یادگیری ثابت نیست: تابع lr_lambda در شش درصد اول گام‌ها نرخ را به‌صورت خطی از نزدیک صفر تا مقدار اصلی بالا می‌برد، که همان warmup است، و بعد با یک منحنی کسینوسی تا صفر پایین می‌آورد. warmup برای ترنسفورمر مهم است، مخصوصاً با ساختار Post-LN، چون در گام‌های اول وزن‌ها تصادفی‌اند و گرادیان‌ها بزرگ و پرنویزند و نرخ یادگیری بزرگ می‌تواند آموزش را خراب کند. زمان‌بند بعد از هر گام به‌روز می‌شود نه بعد از هر اپوک. در حلقه‌ی آموزش، بعد از backward، نرم گرادیان‌ها به حداکثر یک محدود می‌شود تا یک batch بد باعث جهش وزن‌ها نشود. هر اپوک ۱۷۸۲ گام است و روی CPU چهار هسته‌ای حدود شش و نیم دقیقه طول می‌کشد؛ کل شش اپوک حدود ۳۹ دقیقه. بعد از هر اپوک روی داده‌ی اعتبارسنجی ارزیابی می‌کنم و اگر دقت اعتبارسنجی بهتر شد وزن‌ها را ذخیره می‌کنم؛ ارزیابی نهایی روی تست با همین بهترین وزن‌ها انجام می‌شود.</aside>
+</section>

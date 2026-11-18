@@ -1,0 +1,21 @@
+<section id="multihead" style="background:#F7F5F0;color:#16233A;font-family:'Vazirmatn', Tahoma, sans-serif;text-align:right;padding:128px 128px 160px;display:flex;flex-direction:column;gap:36px">
+<p style="font-size:24px;font-weight:700;color:#0E7C7B">&#8235;بخش ۲ · مدل</p>
+<h2 style="font-size:64px;font-weight:700;line-height:1.3">&#8235;Multi-Head Attention</h2>
+<div style="display:flex;flex-direction:row-reverse;gap:40px;align-items:stretch">
+<div style="flex:1;display:flex;flex-direction:column;gap:14px;justify-content:center">
+<h3 style="font-size:32px;font-weight:700;line-height:1.5">&#8235;مسیر ابعاد</h3>
+<table style="font-size:26px;color:#16233A;background:#FFFFFF;border-radius:12px">
+<tr><th style="width:48%;text-align:left">shape</th><th style="width:52%;text-align:right">مرحله</th></tr>
+<tr><td>(B, T, 128)</td><td>&#8235;ورودی x</td></tr>
+<tr><td>(B, T, 128)</td><td>W_q, W_k, W_v</td></tr>
+<tr><td>(B, 4, T, 32)</td><td>split heads</td></tr>
+<tr><td>(B, 4, T, T)</td><td>&#8235;وزن‌های توجه</td></tr>
+<tr><td>(B, T, 128)</td><td>merge + W_o</td></tr>
+</table>
+<p style="font-size:28px;line-height:1.7;color:#4A5568">&#8235;هر سر در زیرفضای 32 بعدی خودش الگوی متفاوتی از وابستگی را یاد می‌گیرد.</p>
+</div>
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;line-height:1.65;color:#E6EAF0;background:#16233A;border-radius:16px;padding:28px 32px;text-align:left;white-space:nowrap">self.W_q = nn.Linear(d_model, d_model)&nbsp;&nbsp;# also W_k, W_v, W_o<br><br>def _split_heads(self, x):&nbsp;&nbsp;&nbsp;# (B,T,d) -> (B,h,T,d_k)<br>&nbsp;&nbsp;B, T, _ = x.shape<br>&nbsp;&nbsp;return x.view(B, T, self.h, self.d_k).transpose(1, 2)<br><br>def _merge_heads(self, x):&nbsp;&nbsp;&nbsp;# (B,h,T,d_k) -> (B,T,d)<br>&nbsp;&nbsp;return x.transpose(1, 2).contiguous().view(B, T, -1)<br><br>def forward(self, x, key_mask=None):<br>&nbsp;&nbsp;q = self._split_heads(self.W_q(x))<br>&nbsp;&nbsp;k = self._split_heads(self.W_k(x))<br>&nbsp;&nbsp;v = self._split_heads(self.W_v(x))<br>&nbsp;&nbsp;out, attn = self.attention(q, k, v, key_mask)<br>&nbsp;&nbsp;return self.W_o(self._merge_heads(out)), attn</p>
+</div>
+<p style="position:absolute;left:128px;bottom:64px;font-size:24px;color:#8A8F98">Transformer · AG News</p>
+<aside>توجه چندسر به جای یک توجه بزرگ، چهار توجه کوچک‌تر را موازی اجرا می‌کند. پیاده‌سازی من چهار لایه‌ی خطی دارد: W_q و W_k و W_v که ورودی را به query و key و value نگاشت می‌کنند و W_o که در آخر خروجی سرها را ترکیب می‌کند. نکته‌ی اصلی تابع split_heads است: خروجی لایه‌ی خطی ابعاد B در T در ۱۲۸ دارد؛ با view آن را به B در T در ۴ در ۳۲ تبدیل می‌کنم، یعنی ۱۲۸ بعد را به چهار تکه‌ی ۳۲ تایی می‌شکنم، و بعد با transpose بعد سر را جلو می‌آورم تا بشود B در ۴ در T در ۳۲. حالا همان کلاس توجه اسلاید قبل روی هر چهار سر به‌صورت موازی و بدون حلقه اجرا می‌شود، چون ضرب ماتریسی روی دو بعد آخر عمل می‌کند. merge_heads برعکس همین کار است: transpose، بعد contiguous چون بعد از transpose حافظه پیوسته نیست و view خطا می‌دهد، و بعد view به B در T در ۱۲۸. در آخر W_o اعمال می‌شود. چون Q و K و V هر سه از خود x ساخته می‌شوند، این Self-Attention است. فایده‌ی چند سر این است که هر سر می‌تواند روی نوع متفاوتی از رابطه تمرکز کند؛ در heatmapها می‌بینیم که واقعاً همین اتفاق افتاده.</aside>
+</section>

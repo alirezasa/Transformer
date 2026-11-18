@@ -1,0 +1,20 @@
+<section id="attention" style="background:#F7F5F0;color:#16233A;font-family:'Vazirmatn', Tahoma, sans-serif;text-align:right;padding:128px 128px 160px;display:flex;flex-direction:column;gap:36px">
+<p style="font-size:24px;font-weight:700;color:#0E7C7B">&#8235;بخش ۲ · مدل</p>
+<h2 style="font-size:64px;font-weight:700;line-height:1.3">&#8235;Scaled Dot-Product Attention</h2>
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:32px;line-height:1.5;color:#16233A;background:#FFFFFF;border:1px solid #E2DED5;border-radius:16px;padding:24px 32px;text-align:center">Attention(Q, K, V) = softmax( Q·Kᵀ / √d_k ) · V</p>
+<div style="display:flex;flex-direction:row-reverse;gap:40px;align-items:stretch">
+<div style="flex:1;display:flex;flex-direction:column;gap:20px;justify-content:center">
+<div style="display:flex;flex-direction:column;gap:6px">
+<h3 style="font-size:32px;font-weight:700;line-height:1.5">&#8235;تقسیم بر √d_k</h3>
+<p style="font-size:28px;line-height:1.7;color:#4A5568">&#8235;واریانس ضرب داخلی را حدود ۱ نگه می‌دارد تا softmax اشباع نشود و گرادیان صفر نشود.</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:6px">
+<h3 style="font-size:32px;font-weight:700;line-height:1.5">&#8235;ماسک پدینگ</h3>
+<p style="font-size:28px;line-height:1.7;color:#4A5568">&#8235;امتیاز کلیدهای [PAD] قبل از softmax برابر ∞− می‌شود؛ وزن توجه به آن‌ها دقیقاً صفر است.</p>
+</div>
+</div>
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;line-height:1.7;color:#E6EAF0;background:#16233A;border-radius:16px;padding:28px 32px;text-align:left;white-space:nowrap">def forward(self, q, k, v, key_mask=None):<br>&nbsp;&nbsp;# q, k, v: (B, h, T, d_k)&nbsp;&nbsp; key_mask: (B, T)<br>&nbsp;&nbsp;d_k = q.size(-1)<br>&nbsp;&nbsp;scores = torch.matmul(q, k.transpose(-2, -1))<br>&nbsp;&nbsp;scores = scores / math.sqrt(d_k)&nbsp;&nbsp; # (B, h, T, T)<br>&nbsp;&nbsp;if key_mask is not None:<br>&nbsp;&nbsp;&nbsp;&nbsp;scores = scores.masked_fill(<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;~key_mask[:, None, None, :], float("-inf"))<br>&nbsp;&nbsp;attn = torch.softmax(scores, dim=-1)<br>&nbsp;&nbsp;out = torch.matmul(self.dropout(attn), v)<br>&nbsp;&nbsp;return out, attn</p>
+</div>
+<p style="position:absolute;left:128px;bottom:64px;font-size:24px;color:#8A8F98">Transformer · AG News</p>
+<aside>این قلب ترنسفورمر است و دقیقاً فرمول مقاله را پیاده می‌کند. ورودی سه تنسور Q و K و V است با ابعاد batch، تعداد سر، طول جمله و d_k. خط اول Q را در ترانهاده‌ی K ضرب می‌کند؛ نتیجه برای هر سر یک ماتریس T در T است که درایه‌ی i و j آن می‌گوید توکن i چقدر به توکن j شبیه است. بعد بر جذر d_k تقسیم می‌کنیم. دلیلش این است که ضرب داخلی دو بردار d_k بعدی واریانسی متناسب با d_k دارد؛ اگر تقسیم نکنیم امتیازها بزرگ می‌شوند، softmax تقریباً یک‌داغ می‌شود و گرادیانش به صفر نزدیک می‌شود. قدم بعد ماسک است: key_mask ابعاد B در T دارد و با None به B در یک در یک در T تبدیل می‌شود تا روی همه‌ی سرها و همه‌ی queryها broadcast شود؛ هر جا کلید پدینگ است امتیاز منفی بی‌نهایت می‌شود و بعد از softmax وزنش دقیقاً صفر است. softmax روی بعد آخر گرفته می‌شود، پس هر سطر یک توزیع احتمال است و جمعش یک می‌شود. در آخر وزن‌ها، بعد از dropout، در V ضرب می‌شوند. تابع علاوه بر خروجی، خود وزن‌های توجه را هم برمی‌گرداند تا بعداً heatmap رسم کنم.</aside>
+</section>

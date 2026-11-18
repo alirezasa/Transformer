@@ -1,0 +1,20 @@
+<section id="embed" style="background:#F7F5F0;color:#16233A;font-family:'Vazirmatn', Tahoma, sans-serif;text-align:right;padding:128px 128px 160px;display:flex;flex-direction:column;gap:36px">
+<p style="font-size:24px;font-weight:700;color:#0E7C7B">&#8235;بخش ۲ · مدل</p>
+<h2 style="font-size:64px;font-weight:700;line-height:1.3">&#8235;امبدینگ توکن و کدگذاری موقعیت</h2>
+<div style="display:flex;flex-direction:row-reverse;gap:40px;align-items:stretch">
+<div style="flex:1;display:flex;flex-direction:column;gap:24px;justify-content:center">
+<div style="display:flex;flex-direction:column;gap:6px">
+<h3 style="font-size:32px;font-weight:700;line-height:1.5">&#8235;چرا ضرب در √d_model؟</h3>
+<p style="font-size:28px;line-height:1.7;color:#4A5568">&#8235;تا مقیاس امبدینگ با کدگذاری موقعیت (که بین 1− و 1+ است) هم‌اندازه شود و موقعیت بر معنا غلبه نکند.</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:6px">
+<h3 style="font-size:32px;font-weight:700;line-height:1.5">&#8235;چرا کدگذاری موقعیت؟</h3>
+<p style="font-size:28px;line-height:1.7;color:#4A5568">&#8235;Self-Attention به ترتیب توکن‌ها بی‌تفاوت است؛ بدون PE مدل ترتیب کلمات را نمی‌بیند.</p>
+</div>
+<p style="font-size:28px;line-height:1.7;color:#16233A">&#8235;PE پارامتر یادگرفتنی ندارد و با register_buffer ذخیره می‌شود.</p>
+</div>
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;line-height:1.65;color:#E6EAF0;background:#16233A;border-radius:16px;padding:28px 32px;text-align:left;white-space:nowrap">class TokenEmbedding(nn.Module):<br>&nbsp;&nbsp;def forward(self, input_ids):&nbsp;&nbsp;&nbsp;&nbsp; # (B, T)<br>&nbsp;&nbsp;&nbsp;&nbsp;return self.emb(input_ids) * self.scale<br><br>class PositionalEncoding(nn.Module):<br>&nbsp;&nbsp;def __init__(self, d_model, max_len, dropout):<br>&nbsp;&nbsp;&nbsp;&nbsp;pos = torch.arange(max_len).unsqueeze(1)<br>&nbsp;&nbsp;&nbsp;&nbsp;div = torch.exp(torch.arange(0, d_model, 2)<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;* (-math.log(10000.0) / d_model))<br>&nbsp;&nbsp;&nbsp;&nbsp;pe[:, 0::2] = torch.sin(pos * div)<br>&nbsp;&nbsp;&nbsp;&nbsp;pe[:, 1::2] = torch.cos(pos * div)<br>&nbsp;&nbsp;def forward(self, x):&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; # (B, T, d)<br>&nbsp;&nbsp;&nbsp;&nbsp;return self.dropout(x + self.pe[:, :x.size(1)])</p>
+</div>
+<p style="position:absolute;left:128px;bottom:64px;font-size:24px;color:#8A8F98">Transformer · AG News</p>
+<aside>اولین دو کلاس مدل این‌ها هستند. TokenEmbedding یک nn.Embedding است که برای هر شناسه یک بردار ۱۲۸ بعدی نگه می‌دارد و padding_idx آن صفر است تا بردار پدینگ همیشه صفر بماند. خروجی در جذر d_model ضرب می‌شود، مثل مقاله‌ی اصلی؛ دلیلش این است که مقادیر امبدینگ در ابتدا کوچک‌اند و کدگذاری موقعیت بین منفی یک و یک است، پس بدون این ضرب، سیگنال موقعیت بر معنای کلمه غالب می‌شود. PositionalEncoding همان فرمول سینوسی مقاله است: برای بعدهای زوج سینوس و برای بعدهای فرد کسینوس، با فرکانس‌هایی که به‌صورت هندسی از یک تا یک ده‌هزارم کم می‌شوند. متغیر div همان یک تقسیم بر ده هزار به توان دو i بر d است که برای پایداری عددی با exp و log نوشته شده. این ماتریس یک بار ساخته می‌شود و با register_buffer ذخیره می‌شود؛ یعنی جزو وزن‌های قابل آموزش نیست ولی همراه مدل به دستگاه منتقل می‌شود. در forward فقط به اندازه‌ی طول جمله از آن برمی‌داریم و با ورودی جمع می‌کنیم. دلیل نیاز به آن این است که توجه خودش هیچ درکی از ترتیب ندارد.</aside>
+</section>
