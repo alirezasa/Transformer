@@ -1,0 +1,307 @@
+<!doctype html><html lang="fa"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Transformer — ارائه‌ی تمرین ۲ (AG News)</title><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;700&display=swap"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap"><style>
+body{margin:0;background:#2b2f36;font-family:'Vazirmatn',Tahoma,sans-serif}
+.wrap{max-width:1280px;margin:32px auto;padding:0 16px}
+.frame{width:100%;aspect-ratio:16/9;overflow:hidden;position:relative;border-radius:8px;box-shadow:0 4px 24px rgba(0,0,0,.4)}
+.frame>section{width:1920px;height:1080px;box-sizing:border-box;position:absolute;left:0;top:0;transform-origin:0 0}
+section *{margin:0;box-sizing:border-box}
+section table{border-collapse:collapse}section td,section th{border:1px solid #E2DED5;padding:.35em .6em}
+section aside{display:none}
+x-shape{display:block;flex:none}
+x-shape[kind=arrow-right]{clip-path:polygon(0 30%,60% 30%,60% 0,100% 50%,60% 100%,60% 70%,0 70%)}
+.notes{direction:rtl;text-align:right;background:#F7F5F0;color:#16233A;border-radius:8px;padding:16px 24px;margin:12px 0 48px;font-size:17px;line-height:1.9}
+.notes b{color:#0E7C7B}
+</style></head><body><div class="wrap"><div class="frame"><section id="cover" data-transition="fade" style="background:#16233A;color:#F7F5F0;font-family:'Vazirmatn', Tahoma, sans-serif;text-align:right;padding:128px;display:flex;flex-direction:column;gap:32px">
+<p style="font-size:28px;font-weight:700;color:#F2B544">&#8235;تمرین ۲</p>
+<h1 style="font-size:96px;font-weight:700;line-height:1.3">&#8235;Transformer Encoder از صفر برای طبقه‌بندی خبر</h1>
+<p style="font-size:32px;line-height:1.7;color:#C9D3E0">&#8235;دیتاست AG News · چهار کلاس · فقط با nn.Linear، nn.LayerNorm، nn.Embedding و عملیات ماتریسی</p>
+<div style="flex:1"></div>
+<div style="display:flex;flex-direction:row-reverse;gap:32px">
+<div style="flex:1;display:flex;flex-direction:column;gap:8px;border-top:2px solid #F2B544;padding:24px 0 0 0">
+<p style="font-size:64px;font-weight:700;line-height:1.2">89.8%</p>
+<p style="font-size:28px;color:#C9D3E0">&#8235;دقت روی داده‌ی Test</p>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:8px;border-top:2px solid #F2B544;padding:24px 0 0 0">
+<p style="font-size:64px;font-weight:700;line-height:1.2">265K</p>
+<p style="font-size:28px;color:#C9D3E0">&#8235;پارامتر بدون امبدینگ</p>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:8px;border-top:2px solid #F2B544;padding:24px 0 0 0">
+<p style="font-size:64px;font-weight:700;line-height:1.2">N=2, h=4</p>
+<p style="font-size:28px;color:#C9D3E0">&#8235;دو لایه‌ی کدگذار، چهار سر توجه</p>
+</div>
+</div>
+<aside>سلام. در این تمرین یک Transformer Encoder را کاملاً از صفر پیاده‌سازی کردم تا خبرهای دیتاست AG News را در چهار دسته طبقه‌بندی کند: جهان، ورزش، اقتصاد و علم و فناوری. شرط تمرین این بود که از ماژول‌های آماده مثل nn.MultiheadAttention یا nn.TransformerEncoder و مدل‌های Hugging Face استفاده نشود؛ همه‌ی اجزا فقط با لایه‌ی خطی، LayerNorm، Embedding و ضرب ماتریسی ساخته شده‌اند و در کد با یک assert هم این موضوع چک می‌شود. مدل کوچک است: دو لایه‌ی کدگذار، چهار سر توجه و حدود ۲۶۵ هزار پارامتر بدون احتساب جدول امبدینگ. بدون هیچ پیش‌آموزشی و روی CPU به دقت ۸۹٫۸ درصد روی تست رسید. به ترتیب داده، تک‌تک کلاس‌های مدل، آموزش، نتایج و در آخر heatmap وزن‌های توجه را توضیح می‌دهم.</aside>
+</section>
+</div><div class="notes"><b>اسلاید 1 — Transformer Encoder از صفر برای طبقه‌بندی خبر</b><br>سلام. در این تمرین یک Transformer Encoder را کاملاً از صفر پیاده‌سازی کردم تا خبرهای دیتاست AG News را در چهار دسته طبقه‌بندی کند: جهان، ورزش، اقتصاد و علم و فناوری. شرط تمرین این بود که از ماژول‌های آماده مثل nn.MultiheadAttention یا nn.TransformerEncoder و مدل‌های Hugging Face استفاده نشود؛ همه‌ی اجزا فقط با لایه‌ی خطی، LayerNorm، Embedding و ضرب ماتریسی ساخته شده‌اند و در کد با یک assert هم این موضوع چک می‌شود. مدل کوچک است: دو لایه‌ی کدگذار، چهار سر توجه و حدود ۲۶۵ هزار پارامتر بدون احتساب جدول امبدینگ. بدون هیچ پیش‌آموزشی و روی CPU به دقت ۸۹٫۸ درصد روی تست رسید. به ترتیب داده، تک‌تک کلاس‌های مدل، آموزش، نتایج و در آخر heatmap وزن‌های توجه را توضیح می‌دهم.</div></div><div class="wrap"><div class="frame"><section id="data" style="background:#F7F5F0;color:#16233A;font-family:'Vazirmatn', Tahoma, sans-serif;text-align:right;padding:128px 128px 160px;display:flex;flex-direction:column;gap:36px">
+<p style="font-size:24px;font-weight:700;color:#0E7C7B">&#8235;بخش ۱ · داده</p>
+<h2 style="font-size:64px;font-weight:700;line-height:1.3">&#8235;داده، توکنایزر و ماسک پدینگ</h2>
+<div style="display:flex;flex-direction:row-reverse;gap:40px;align-items:stretch">
+<div style="flex:1;display:flex;flex-direction:column;gap:22px;justify-content:center">
+<div style="display:flex;flex-direction:column;gap:4px">
+<p style="font-size:64px;font-weight:700;line-height:1.2;color:#0E7C7B">120,000</p>
+<p style="font-size:28px;line-height:1.6;color:#4A5568">&#8235;خبر آموزشی در ۴ کلاس متوازن؛ 6,000 تا برای اعتبارسنجی جدا شد و 7,600 خبر تست</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:4px">
+<h3 style="font-size:32px;font-weight:700;line-height:1.5">&#8235;توکنایزر سطح کلمه</h3>
+<p style="font-size:28px;line-height:1.6;color:#4A5568">&#8235;واژگان 30,000 کلمه‌ای از داده‌ی آموزش · توکن‌های ویژه: [PAD]=0، [UNK]=1، [CLS]=2</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:4px">
+<h3 style="font-size:32px;font-weight:700;line-height:1.5">&#8235;طول دنباله</h3>
+<p style="font-size:28px;line-height:1.6;color:#4A5568">&#8235;میانگین 45 توکن · max_len = 128 · پدینگ پویا تا بلندترین جمله‌ی هر batch</p>
+</div>
+</div>
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;line-height:1.7;color:#E6EAF0;background:#16233A;border-radius:16px;padding:28px 32px;text-align:left;white-space:nowrap"># [CLS] + tokens, truncated to max_len<br>ids = [vocab.cls_id] + vocab.encode(toks)[:max_len - 1]<br><br>def collate_batch(batch, pad_id=0):<br>&nbsp;&nbsp;seqs, labels = zip(*batch)<br>&nbsp;&nbsp;T = max(len(s) for s in seqs)<br>&nbsp;&nbsp;input_ids = torch.full((len(seqs), T), pad_id)<br>&nbsp;&nbsp;for i, s in enumerate(seqs):<br>&nbsp;&nbsp;&nbsp;&nbsp;input_ids[i, :len(s)] = torch.tensor(s)<br>&nbsp;&nbsp;pad_mask = input_ids != pad_id&nbsp;&nbsp;# True = real token<br>&nbsp;&nbsp;return input_ids, pad_mask, labels</p>
+</div>
+<p style="position:absolute;left:128px;bottom:64px;font-size:24px;color:#8A8F98">Transformer · AG News</p>
+<aside>دیتاست AG News صد و بیست هزار خبر آموزشی و ۷۶۰۰ خبر تست دارد و چهار کلاس آن کاملاً متوازن است. متن ورودی هر نمونه، عنوان خبر به‌علاوه‌ی توضیح آن است. از داده‌ی آموزش شش هزار نمونه را برای اعتبارسنجی کنار گذاشتم. چون نباید از توکنایزر آماده استفاده می‌کردم، یک توکنایزر ساده‌ی سطح کلمه نوشتم: متن را حروف کوچک می‌کند، تگ‌های HTML را پاک می‌کند و با یک عبارت منظم کلمه‌ها و علائم نگارشی را جدا می‌کند. واژگان از روی داده‌ی آموزش با سی هزار کلمه‌ی پرتکرار ساخته می‌شود و سه توکن ویژه دارد: PAD برای پر کردن، UNK برای کلمات ناشناخته و CLS که اول هر جمله می‌آید و بعداً نماینده‌ی کل جمله می‌شود. میانگین طول جمله‌ها ۴۵ توکن است و با حداکثر طول ۱۲۸ فقط شانزده‌صدم درصد نمونه‌ها بریده می‌شوند. تابع collate_batch جمله‌های هر batch را تا طول بلندترین جمله‌ی همان batch با صفر پر می‌کند و یک ماسک برمی‌گرداند که برای توکن واقعی True و برای پدینگ False است. این ماسک بعداً در توجه استفاده می‌شود.</aside>
+</section>
+</div><div class="notes"><b>اسلاید 2 — داده، توکنایزر و ماسک پدینگ</b><br>دیتاست AG News صد و بیست هزار خبر آموزشی و ۷۶۰۰ خبر تست دارد و چهار کلاس آن کاملاً متوازن است. متن ورودی هر نمونه، عنوان خبر به‌علاوه‌ی توضیح آن است. از داده‌ی آموزش شش هزار نمونه را برای اعتبارسنجی کنار گذاشتم. چون نباید از توکنایزر آماده استفاده می‌کردم، یک توکنایزر ساده‌ی سطح کلمه نوشتم: متن را حروف کوچک می‌کند، تگ‌های HTML را پاک می‌کند و با یک عبارت منظم کلمه‌ها و علائم نگارشی را جدا می‌کند. واژگان از روی داده‌ی آموزش با سی هزار کلمه‌ی پرتکرار ساخته می‌شود و سه توکن ویژه دارد: PAD برای پر کردن، UNK برای کلمات ناشناخته و CLS که اول هر جمله می‌آید و بعداً نماینده‌ی کل جمله می‌شود. میانگین طول جمله‌ها ۴۵ توکن است و با حداکثر طول ۱۲۸ فقط شانزده‌صدم درصد نمونه‌ها بریده می‌شوند. تابع collate_batch جمله‌های هر batch را تا طول بلندترین جمله‌ی همان batch با صفر پر می‌کند و یک ماسک برمی‌گرداند که برای توکن واقعی True و برای پدینگ False است. این ماسک بعداً در توجه استفاده می‌شود.</div></div><div class="wrap"><div class="frame"><section id="arch" style="background:#F7F5F0;color:#16233A;font-family:'Vazirmatn', Tahoma, sans-serif;text-align:right;padding:128px 128px 160px;display:flex;flex-direction:column;gap:36px">
+<p style="font-size:24px;font-weight:700;color:#0E7C7B">&#8235;بخش ۲ · مدل</p>
+<h2 style="font-size:64px;font-weight:700;line-height:1.3">&#8235;معماری کلی و مسیر تنسورها</h2>
+<div style="display:flex;flex-direction:row;gap:10px;align-items:center;text-align:center">
+<div style="flex:1;display:flex;flex-direction:column;gap:6px;background:#FFFFFF;border:1px solid #E2DED5;border-radius:12px;padding:20px 8px">
+<p style="font-size:28px;font-weight:700">input_ids</p>
+<p style="font-size:24px;color:#4A5568">[CLS] w1 w2 …</p>
+<p style="font-size:24px;color:#0E7C7B;font-weight:700">(B, T)</p>
+</div>
+<x-shape kind="arrow-right" style="width:28px;height:18px;background:#0E7C7B"></x-shape>
+<div style="flex:1;display:flex;flex-direction:column;gap:6px;background:#FFFFFF;border:1px solid #E2DED5;border-radius:12px;padding:20px 8px">
+<p style="font-size:28px;font-weight:700">Embedding</p>
+<p style="font-size:24px;color:#4A5568">× √d_model</p>
+<p style="font-size:24px;color:#0E7C7B;font-weight:700">(B, T, 128)</p>
+</div>
+<x-shape kind="arrow-right" style="width:28px;height:18px;background:#0E7C7B"></x-shape>
+<div style="flex:1;display:flex;flex-direction:column;gap:6px;background:#FFFFFF;border:1px solid #E2DED5;border-radius:12px;padding:20px 8px">
+<p style="font-size:28px;font-weight:700">+ Positional</p>
+<p style="font-size:24px;color:#4A5568">sin / cos</p>
+<p style="font-size:24px;color:#0E7C7B;font-weight:700">(B, T, 128)</p>
+</div>
+<x-shape kind="arrow-right" style="width:28px;height:18px;background:#0E7C7B"></x-shape>
+<div style="flex:1;display:flex;flex-direction:column;gap:6px;background:#16233A;border-radius:12px;padding:20px 8px">
+<p style="font-size:28px;font-weight:700;color:#F7F5F0">Encoder × 2</p>
+<p style="font-size:24px;color:#C9D3E0">MHA + FFN</p>
+<p style="font-size:24px;color:#F2B544;font-weight:700">(B, T, 128)</p>
+</div>
+<x-shape kind="arrow-right" style="width:28px;height:18px;background:#0E7C7B"></x-shape>
+<div style="flex:1;display:flex;flex-direction:column;gap:6px;background:#FFFFFF;border:1px solid #E2DED5;border-radius:12px;padding:20px 8px">
+<p style="font-size:28px;font-weight:700">[CLS] pool</p>
+<p style="font-size:24px;color:#4A5568">h[:, 0]</p>
+<p style="font-size:24px;color:#0E7C7B;font-weight:700">(B, 128)</p>
+</div>
+<x-shape kind="arrow-right" style="width:28px;height:18px;background:#0E7C7B"></x-shape>
+<div style="flex:1;display:flex;flex-direction:column;gap:6px;background:#FFFFFF;border:1px solid #E2DED5;border-radius:12px;padding:20px 8px">
+<p style="font-size:28px;font-weight:700">Linear</p>
+<p style="font-size:24px;color:#4A5568">logits</p>
+<p style="font-size:24px;color:#0E7C7B;font-weight:700">(B, 4)</p>
+</div>
+</div>
+<table style="font-size:28px;color:#16233A;background:#FFFFFF;border-radius:12px;text-align:center">
+<tr><th style="width:14%">dropout</th><th style="width:14%">N</th><th style="width:16%">d_ff</th><th style="width:20%">d_k = d_v</th><th style="width:14%">h</th><th style="width:22%">d_model</th></tr>
+<tr><td>0.1</td><td>2</td><td>256</td><td>32</td><td>4</td><td>128</td></tr>
+</table>
+<p style="font-size:28px;line-height:1.7;color:#4A5568">&#8235;در نوت‌بوک ابعاد خروجی هر جزء روی یک batch واقعی چاپ و با assert بررسی می‌شود: جمع هر سطر توجه = 1 و توجه به [PAD] = 0.</p>
+<p style="position:absolute;left:128px;bottom:64px;font-size:24px;color:#8A8F98">Transformer · AG News</p>
+<aside>این تصویر کلی مدل و ابعاد تنسور در هر مرحله است. B اندازه‌ی batch و T طول دنباله است. ورودی، شناسه‌ی توکن‌هاست. لایه‌ی امبدینگ هر شناسه را به یک بردار ۱۲۸ بعدی تبدیل می‌کند و در جذر d_model ضرب می‌شود. بعد کدگذاری موقعیت سینوسی به آن جمع می‌شود. سپس دو لایه‌ی کدگذار پشت سر هم قرار دارند که هر کدام یک توجه چندسر و یک شبکه‌ی پیش‌خور دارند و ابعاد را تغییر نمی‌دهند. از خروجی لایه‌ی آخر فقط بردار توکن CLS را برمی‌دارم که یک بردار ۱۲۸ بعدی برای کل جمله است و یک لایه‌ی خطی آن را به چهار logit تبدیل می‌کند. فراپارامترها طبق صورت تمرین‌اند: d_model برابر ۱۲۸، چهار سر که یعنی هر سر ۳۲ بعد دارد، بعد میانی شبکه‌ی پیش‌خور ۲۵۶ و دو لایه. مدل روی هم حدود ۴٫۱ میلیون پارامتر دارد که ۳٫۸۴ میلیون آن جدول امبدینگ است و خود ترنسفورمر و سر طبقه‌بندی فقط ۲۶۵ هزار پارامترند. در بخش چهار نوت‌بوک یک batch واقعی را از تک‌تک اجزا عبور می‌دهم و ابعاد را با assert چک می‌کنم.</aside>
+</section>
+</div><div class="notes"><b>اسلاید 3 — معماری کلی و مسیر تنسورها</b><br>این تصویر کلی مدل و ابعاد تنسور در هر مرحله است. B اندازه‌ی batch و T طول دنباله است. ورودی، شناسه‌ی توکن‌هاست. لایه‌ی امبدینگ هر شناسه را به یک بردار ۱۲۸ بعدی تبدیل می‌کند و در جذر d_model ضرب می‌شود. بعد کدگذاری موقعیت سینوسی به آن جمع می‌شود. سپس دو لایه‌ی کدگذار پشت سر هم قرار دارند که هر کدام یک توجه چندسر و یک شبکه‌ی پیش‌خور دارند و ابعاد را تغییر نمی‌دهند. از خروجی لایه‌ی آخر فقط بردار توکن CLS را برمی‌دارم که یک بردار ۱۲۸ بعدی برای کل جمله است و یک لایه‌ی خطی آن را به چهار logit تبدیل می‌کند. فراپارامترها طبق صورت تمرین‌اند: d_model برابر ۱۲۸، چهار سر که یعنی هر سر ۳۲ بعد دارد، بعد میانی شبکه‌ی پیش‌خور ۲۵۶ و دو لایه. مدل روی هم حدود ۴٫۱ میلیون پارامتر دارد که ۳٫۸۴ میلیون آن جدول امبدینگ است و خود ترنسفورمر و سر طبقه‌بندی فقط ۲۶۵ هزار پارامترند. در بخش چهار نوت‌بوک یک batch واقعی را از تک‌تک اجزا عبور می‌دهم و ابعاد را با assert چک می‌کنم.</div></div><div class="wrap"><div class="frame"><section id="embed" style="background:#F7F5F0;color:#16233A;font-family:'Vazirmatn', Tahoma, sans-serif;text-align:right;padding:128px 128px 160px;display:flex;flex-direction:column;gap:36px">
+<p style="font-size:24px;font-weight:700;color:#0E7C7B">&#8235;بخش ۲ · مدل</p>
+<h2 style="font-size:64px;font-weight:700;line-height:1.3">&#8235;امبدینگ توکن و کدگذاری موقعیت</h2>
+<div style="display:flex;flex-direction:row-reverse;gap:40px;align-items:stretch">
+<div style="flex:1;display:flex;flex-direction:column;gap:24px;justify-content:center">
+<div style="display:flex;flex-direction:column;gap:6px">
+<h3 style="font-size:32px;font-weight:700;line-height:1.5">&#8235;چرا ضرب در √d_model؟</h3>
+<p style="font-size:28px;line-height:1.7;color:#4A5568">&#8235;تا مقیاس امبدینگ با کدگذاری موقعیت (که بین 1− و 1+ است) هم‌اندازه شود و موقعیت بر معنا غلبه نکند.</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:6px">
+<h3 style="font-size:32px;font-weight:700;line-height:1.5">&#8235;چرا کدگذاری موقعیت؟</h3>
+<p style="font-size:28px;line-height:1.7;color:#4A5568">&#8235;Self-Attention به ترتیب توکن‌ها بی‌تفاوت است؛ بدون PE مدل ترتیب کلمات را نمی‌بیند.</p>
+</div>
+<p style="font-size:28px;line-height:1.7;color:#16233A">&#8235;PE پارامتر یادگرفتنی ندارد و با register_buffer ذخیره می‌شود.</p>
+</div>
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;line-height:1.65;color:#E6EAF0;background:#16233A;border-radius:16px;padding:28px 32px;text-align:left;white-space:nowrap">class TokenEmbedding(nn.Module):<br>&nbsp;&nbsp;def forward(self, input_ids):&nbsp;&nbsp;&nbsp;&nbsp; # (B, T)<br>&nbsp;&nbsp;&nbsp;&nbsp;return self.emb(input_ids) * self.scale<br><br>class PositionalEncoding(nn.Module):<br>&nbsp;&nbsp;def __init__(self, d_model, max_len, dropout):<br>&nbsp;&nbsp;&nbsp;&nbsp;pos = torch.arange(max_len).unsqueeze(1)<br>&nbsp;&nbsp;&nbsp;&nbsp;div = torch.exp(torch.arange(0, d_model, 2)<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;* (-math.log(10000.0) / d_model))<br>&nbsp;&nbsp;&nbsp;&nbsp;pe[:, 0::2] = torch.sin(pos * div)<br>&nbsp;&nbsp;&nbsp;&nbsp;pe[:, 1::2] = torch.cos(pos * div)<br>&nbsp;&nbsp;def forward(self, x):&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; # (B, T, d)<br>&nbsp;&nbsp;&nbsp;&nbsp;return self.dropout(x + self.pe[:, :x.size(1)])</p>
+</div>
+<p style="position:absolute;left:128px;bottom:64px;font-size:24px;color:#8A8F98">Transformer · AG News</p>
+<aside>اولین دو کلاس مدل این‌ها هستند. TokenEmbedding یک nn.Embedding است که برای هر شناسه یک بردار ۱۲۸ بعدی نگه می‌دارد و padding_idx آن صفر است تا بردار پدینگ همیشه صفر بماند. خروجی در جذر d_model ضرب می‌شود، مثل مقاله‌ی اصلی؛ دلیلش این است که مقادیر امبدینگ در ابتدا کوچک‌اند و کدگذاری موقعیت بین منفی یک و یک است، پس بدون این ضرب، سیگنال موقعیت بر معنای کلمه غالب می‌شود. PositionalEncoding همان فرمول سینوسی مقاله است: برای بعدهای زوج سینوس و برای بعدهای فرد کسینوس، با فرکانس‌هایی که به‌صورت هندسی از یک تا یک ده‌هزارم کم می‌شوند. متغیر div همان یک تقسیم بر ده هزار به توان دو i بر d است که برای پایداری عددی با exp و log نوشته شده. این ماتریس یک بار ساخته می‌شود و با register_buffer ذخیره می‌شود؛ یعنی جزو وزن‌های قابل آموزش نیست ولی همراه مدل به دستگاه منتقل می‌شود. در forward فقط به اندازه‌ی طول جمله از آن برمی‌داریم و با ورودی جمع می‌کنیم. دلیل نیاز به آن این است که توجه خودش هیچ درکی از ترتیب ندارد.</aside>
+</section>
+</div><div class="notes"><b>اسلاید 4 — امبدینگ توکن و کدگذاری موقعیت</b><br>اولین دو کلاس مدل این‌ها هستند. TokenEmbedding یک nn.Embedding است که برای هر شناسه یک بردار ۱۲۸ بعدی نگه می‌دارد و padding_idx آن صفر است تا بردار پدینگ همیشه صفر بماند. خروجی در جذر d_model ضرب می‌شود، مثل مقاله‌ی اصلی؛ دلیلش این است که مقادیر امبدینگ در ابتدا کوچک‌اند و کدگذاری موقعیت بین منفی یک و یک است، پس بدون این ضرب، سیگنال موقعیت بر معنای کلمه غالب می‌شود. PositionalEncoding همان فرمول سینوسی مقاله است: برای بعدهای زوج سینوس و برای بعدهای فرد کسینوس، با فرکانس‌هایی که به‌صورت هندسی از یک تا یک ده‌هزارم کم می‌شوند. متغیر div همان یک تقسیم بر ده هزار به توان دو i بر d است که برای پایداری عددی با exp و log نوشته شده. این ماتریس یک بار ساخته می‌شود و با register_buffer ذخیره می‌شود؛ یعنی جزو وزن‌های قابل آموزش نیست ولی همراه مدل به دستگاه منتقل می‌شود. در forward فقط به اندازه‌ی طول جمله از آن برمی‌داریم و با ورودی جمع می‌کنیم. دلیل نیاز به آن این است که توجه خودش هیچ درکی از ترتیب ندارد.</div></div><div class="wrap"><div class="frame"><section id="attention" style="background:#F7F5F0;color:#16233A;font-family:'Vazirmatn', Tahoma, sans-serif;text-align:right;padding:128px 128px 160px;display:flex;flex-direction:column;gap:36px">
+<p style="font-size:24px;font-weight:700;color:#0E7C7B">&#8235;بخش ۲ · مدل</p>
+<h2 style="font-size:64px;font-weight:700;line-height:1.3">&#8235;Scaled Dot-Product Attention</h2>
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:32px;line-height:1.5;color:#16233A;background:#FFFFFF;border:1px solid #E2DED5;border-radius:16px;padding:24px 32px;text-align:center">Attention(Q, K, V) = softmax( Q·Kᵀ / √d_k ) · V</p>
+<div style="display:flex;flex-direction:row-reverse;gap:40px;align-items:stretch">
+<div style="flex:1;display:flex;flex-direction:column;gap:20px;justify-content:center">
+<div style="display:flex;flex-direction:column;gap:6px">
+<h3 style="font-size:32px;font-weight:700;line-height:1.5">&#8235;تقسیم بر √d_k</h3>
+<p style="font-size:28px;line-height:1.7;color:#4A5568">&#8235;واریانس ضرب داخلی را حدود ۱ نگه می‌دارد تا softmax اشباع نشود و گرادیان صفر نشود.</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:6px">
+<h3 style="font-size:32px;font-weight:700;line-height:1.5">&#8235;ماسک پدینگ</h3>
+<p style="font-size:28px;line-height:1.7;color:#4A5568">&#8235;امتیاز کلیدهای [PAD] قبل از softmax برابر ∞− می‌شود؛ وزن توجه به آن‌ها دقیقاً صفر است.</p>
+</div>
+</div>
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;line-height:1.7;color:#E6EAF0;background:#16233A;border-radius:16px;padding:28px 32px;text-align:left;white-space:nowrap">def forward(self, q, k, v, key_mask=None):<br>&nbsp;&nbsp;# q, k, v: (B, h, T, d_k)&nbsp;&nbsp; key_mask: (B, T)<br>&nbsp;&nbsp;d_k = q.size(-1)<br>&nbsp;&nbsp;scores = torch.matmul(q, k.transpose(-2, -1))<br>&nbsp;&nbsp;scores = scores / math.sqrt(d_k)&nbsp;&nbsp; # (B, h, T, T)<br>&nbsp;&nbsp;if key_mask is not None:<br>&nbsp;&nbsp;&nbsp;&nbsp;scores = scores.masked_fill(<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;~key_mask[:, None, None, :], float("-inf"))<br>&nbsp;&nbsp;attn = torch.softmax(scores, dim=-1)<br>&nbsp;&nbsp;out = torch.matmul(self.dropout(attn), v)<br>&nbsp;&nbsp;return out, attn</p>
+</div>
+<p style="position:absolute;left:128px;bottom:64px;font-size:24px;color:#8A8F98">Transformer · AG News</p>
+<aside>این قلب ترنسفورمر است و دقیقاً فرمول مقاله را پیاده می‌کند. ورودی سه تنسور Q و K و V است با ابعاد batch، تعداد سر، طول جمله و d_k. خط اول Q را در ترانهاده‌ی K ضرب می‌کند؛ نتیجه برای هر سر یک ماتریس T در T است که درایه‌ی i و j آن می‌گوید توکن i چقدر به توکن j شبیه است. بعد بر جذر d_k تقسیم می‌کنیم. دلیلش این است که ضرب داخلی دو بردار d_k بعدی واریانسی متناسب با d_k دارد؛ اگر تقسیم نکنیم امتیازها بزرگ می‌شوند، softmax تقریباً یک‌داغ می‌شود و گرادیانش به صفر نزدیک می‌شود. قدم بعد ماسک است: key_mask ابعاد B در T دارد و با None به B در یک در یک در T تبدیل می‌شود تا روی همه‌ی سرها و همه‌ی queryها broadcast شود؛ هر جا کلید پدینگ است امتیاز منفی بی‌نهایت می‌شود و بعد از softmax وزنش دقیقاً صفر است. softmax روی بعد آخر گرفته می‌شود، پس هر سطر یک توزیع احتمال است و جمعش یک می‌شود. در آخر وزن‌ها، بعد از dropout، در V ضرب می‌شوند. تابع علاوه بر خروجی، خود وزن‌های توجه را هم برمی‌گرداند تا بعداً heatmap رسم کنم.</aside>
+</section>
+</div><div class="notes"><b>اسلاید 5 — Scaled Dot-Product Attention</b><br>این قلب ترنسفورمر است و دقیقاً فرمول مقاله را پیاده می‌کند. ورودی سه تنسور Q و K و V است با ابعاد batch، تعداد سر، طول جمله و d_k. خط اول Q را در ترانهاده‌ی K ضرب می‌کند؛ نتیجه برای هر سر یک ماتریس T در T است که درایه‌ی i و j آن می‌گوید توکن i چقدر به توکن j شبیه است. بعد بر جذر d_k تقسیم می‌کنیم. دلیلش این است که ضرب داخلی دو بردار d_k بعدی واریانسی متناسب با d_k دارد؛ اگر تقسیم نکنیم امتیازها بزرگ می‌شوند، softmax تقریباً یک‌داغ می‌شود و گرادیانش به صفر نزدیک می‌شود. قدم بعد ماسک است: key_mask ابعاد B در T دارد و با None به B در یک در یک در T تبدیل می‌شود تا روی همه‌ی سرها و همه‌ی queryها broadcast شود؛ هر جا کلید پدینگ است امتیاز منفی بی‌نهایت می‌شود و بعد از softmax وزنش دقیقاً صفر است. softmax روی بعد آخر گرفته می‌شود، پس هر سطر یک توزیع احتمال است و جمعش یک می‌شود. در آخر وزن‌ها، بعد از dropout، در V ضرب می‌شوند. تابع علاوه بر خروجی، خود وزن‌های توجه را هم برمی‌گرداند تا بعداً heatmap رسم کنم.</div></div><div class="wrap"><div class="frame"><section id="multihead" style="background:#F7F5F0;color:#16233A;font-family:'Vazirmatn', Tahoma, sans-serif;text-align:right;padding:128px 128px 160px;display:flex;flex-direction:column;gap:36px">
+<p style="font-size:24px;font-weight:700;color:#0E7C7B">&#8235;بخش ۲ · مدل</p>
+<h2 style="font-size:64px;font-weight:700;line-height:1.3">&#8235;Multi-Head Attention</h2>
+<div style="display:flex;flex-direction:row-reverse;gap:40px;align-items:stretch">
+<div style="flex:1;display:flex;flex-direction:column;gap:14px;justify-content:center">
+<h3 style="font-size:32px;font-weight:700;line-height:1.5">&#8235;مسیر ابعاد</h3>
+<table style="font-size:26px;color:#16233A;background:#FFFFFF;border-radius:12px">
+<tr><th style="width:48%;text-align:left">shape</th><th style="width:52%;text-align:right">مرحله</th></tr>
+<tr><td>(B, T, 128)</td><td>&#8235;ورودی x</td></tr>
+<tr><td>(B, T, 128)</td><td>W_q, W_k, W_v</td></tr>
+<tr><td>(B, 4, T, 32)</td><td>split heads</td></tr>
+<tr><td>(B, 4, T, T)</td><td>&#8235;وزن‌های توجه</td></tr>
+<tr><td>(B, T, 128)</td><td>merge + W_o</td></tr>
+</table>
+<p style="font-size:28px;line-height:1.7;color:#4A5568">&#8235;هر سر در زیرفضای 32 بعدی خودش الگوی متفاوتی از وابستگی را یاد می‌گیرد.</p>
+</div>
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;line-height:1.65;color:#E6EAF0;background:#16233A;border-radius:16px;padding:28px 32px;text-align:left;white-space:nowrap">self.W_q = nn.Linear(d_model, d_model)&nbsp;&nbsp;# also W_k, W_v, W_o<br><br>def _split_heads(self, x):&nbsp;&nbsp;&nbsp;# (B,T,d) -> (B,h,T,d_k)<br>&nbsp;&nbsp;B, T, _ = x.shape<br>&nbsp;&nbsp;return x.view(B, T, self.h, self.d_k).transpose(1, 2)<br><br>def _merge_heads(self, x):&nbsp;&nbsp;&nbsp;# (B,h,T,d_k) -> (B,T,d)<br>&nbsp;&nbsp;return x.transpose(1, 2).contiguous().view(B, T, -1)<br><br>def forward(self, x, key_mask=None):<br>&nbsp;&nbsp;q = self._split_heads(self.W_q(x))<br>&nbsp;&nbsp;k = self._split_heads(self.W_k(x))<br>&nbsp;&nbsp;v = self._split_heads(self.W_v(x))<br>&nbsp;&nbsp;out, attn = self.attention(q, k, v, key_mask)<br>&nbsp;&nbsp;return self.W_o(self._merge_heads(out)), attn</p>
+</div>
+<p style="position:absolute;left:128px;bottom:64px;font-size:24px;color:#8A8F98">Transformer · AG News</p>
+<aside>توجه چندسر به جای یک توجه بزرگ، چهار توجه کوچک‌تر را موازی اجرا می‌کند. پیاده‌سازی من چهار لایه‌ی خطی دارد: W_q و W_k و W_v که ورودی را به query و key و value نگاشت می‌کنند و W_o که در آخر خروجی سرها را ترکیب می‌کند. نکته‌ی اصلی تابع split_heads است: خروجی لایه‌ی خطی ابعاد B در T در ۱۲۸ دارد؛ با view آن را به B در T در ۴ در ۳۲ تبدیل می‌کنم، یعنی ۱۲۸ بعد را به چهار تکه‌ی ۳۲ تایی می‌شکنم، و بعد با transpose بعد سر را جلو می‌آورم تا بشود B در ۴ در T در ۳۲. حالا همان کلاس توجه اسلاید قبل روی هر چهار سر به‌صورت موازی و بدون حلقه اجرا می‌شود، چون ضرب ماتریسی روی دو بعد آخر عمل می‌کند. merge_heads برعکس همین کار است: transpose، بعد contiguous چون بعد از transpose حافظه پیوسته نیست و view خطا می‌دهد، و بعد view به B در T در ۱۲۸. در آخر W_o اعمال می‌شود. چون Q و K و V هر سه از خود x ساخته می‌شوند، این Self-Attention است. فایده‌ی چند سر این است که هر سر می‌تواند روی نوع متفاوتی از رابطه تمرکز کند؛ در heatmapها می‌بینیم که واقعاً همین اتفاق افتاده.</aside>
+</section>
+</div><div class="notes"><b>اسلاید 6 — Multi-Head Attention</b><br>توجه چندسر به جای یک توجه بزرگ، چهار توجه کوچک‌تر را موازی اجرا می‌کند. پیاده‌سازی من چهار لایه‌ی خطی دارد: W_q و W_k و W_v که ورودی را به query و key و value نگاشت می‌کنند و W_o که در آخر خروجی سرها را ترکیب می‌کند. نکته‌ی اصلی تابع split_heads است: خروجی لایه‌ی خطی ابعاد B در T در ۱۲۸ دارد؛ با view آن را به B در T در ۴ در ۳۲ تبدیل می‌کنم، یعنی ۱۲۸ بعد را به چهار تکه‌ی ۳۲ تایی می‌شکنم، و بعد با transpose بعد سر را جلو می‌آورم تا بشود B در ۴ در T در ۳۲. حالا همان کلاس توجه اسلاید قبل روی هر چهار سر به‌صورت موازی و بدون حلقه اجرا می‌شود، چون ضرب ماتریسی روی دو بعد آخر عمل می‌کند. merge_heads برعکس همین کار است: transpose، بعد contiguous چون بعد از transpose حافظه پیوسته نیست و view خطا می‌دهد، و بعد view به B در T در ۱۲۸. در آخر W_o اعمال می‌شود. چون Q و K و V هر سه از خود x ساخته می‌شوند، این Self-Attention است. فایده‌ی چند سر این است که هر سر می‌تواند روی نوع متفاوتی از رابطه تمرکز کند؛ در heatmapها می‌بینیم که واقعاً همین اتفاق افتاده.</div></div><div class="wrap"><div class="frame"><section id="layer" style="background:#F7F5F0;color:#16233A;font-family:'Vazirmatn', Tahoma, sans-serif;text-align:right;padding:128px 128px 160px;display:flex;flex-direction:column;gap:36px">
+<p style="font-size:24px;font-weight:700;color:#0E7C7B">&#8235;بخش ۲ · مدل</p>
+<h2 style="font-size:64px;font-weight:700;line-height:1.3">&#8235;لایه‌ی کدگذار: FFN، اتصال باقیمانده و LayerNorm</h2>
+<div style="display:flex;flex-direction:row-reverse;gap:40px;align-items:stretch">
+<div style="flex:1;display:flex;flex-direction:column;gap:22px;justify-content:center">
+<div style="display:flex;flex-direction:column;gap:6px">
+<h3 style="font-size:32px;font-weight:700;line-height:1.5">&#8235;Post-LN مثل مقاله‌ی اصلی</h3>
+<p style="font-size:28px;line-height:1.7;color:#4A5568;text-align:left">x = LN(x + Sublayer(x))</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:6px">
+<h3 style="font-size:32px;font-weight:700;line-height:1.5">&#8235;اتصال باقیمانده</h3>
+<p style="font-size:28px;line-height:1.7;color:#4A5568">&#8235;مسیر مستقیم برای گرادیان؛ هر زیرلایه فقط «تغییر» را یاد می‌گیرد.</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:6px">
+<h3 style="font-size:32px;font-weight:700;line-height:1.5">&#8235;FFN</h3>
+<p style="font-size:28px;line-height:1.7;color:#4A5568">&#8235;روی هر توکن جداگانه: 128 → 256 → 128 با GELU؛ غیرخطی بودن مدل از اینجاست.</p>
+</div>
+</div>
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;line-height:1.65;color:#E6EAF0;background:#16233A;border-radius:16px;padding:28px 32px;text-align:left;white-space:nowrap">class PositionwiseFeedForward(nn.Module):<br>&nbsp;&nbsp;def forward(self, x):<br>&nbsp;&nbsp;&nbsp;&nbsp;return self.fc2(self.dropout(F.gelu(self.fc1(x))))<br><br>class EncoderLayer(nn.Module):<br>&nbsp;&nbsp;def forward(self, x, key_mask=None):<br>&nbsp;&nbsp;&nbsp;&nbsp;attn_out, attn = self.self_attn(x, key_mask)<br>&nbsp;&nbsp;&nbsp;&nbsp;x = self.norm1(x + self.drop1(attn_out))<br>&nbsp;&nbsp;&nbsp;&nbsp;x = self.norm2(x + self.drop2(self.ffn(x)))<br>&nbsp;&nbsp;&nbsp;&nbsp;return x, attn<br><br>class TransformerEncoder(nn.Module):<br>&nbsp;&nbsp;def forward(self, input_ids, key_mask=None):<br>&nbsp;&nbsp;&nbsp;&nbsp;x = self.pos_encoding(self.embedding(input_ids))<br>&nbsp;&nbsp;&nbsp;&nbsp;for layer in self.layers:<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;x, attn = layer(x, key_mask)</p>
+</div>
+<p style="position:absolute;left:128px;bottom:64px;font-size:24px;color:#8A8F98">Transformer · AG News</p>
+<aside>هر لایه‌ی کدگذار دو زیرلایه دارد. اولی همان توجه چندسر است. دومی شبکه‌ی پیش‌خور موقعیت‌به‌موقعیت است: دو لایه‌ی خطی که بردار هر توکن را جداگانه از ۱۲۸ به ۲۵۶ بعد می‌برند، GELU می‌زنند و به ۱۲۸ برمی‌گردانند. توجه فقط یک ترکیب خطی وزن‌دار از بردارهاست، پس غیرخطی بودن مدل از همین FFN می‌آید. دور هر زیرلایه یک اتصال باقیمانده و یک LayerNorm هست. من ساختار Post-LN مقاله‌ی اصلی را پیاده کردم: اول خروجی زیرلایه، بعد از dropout، با ورودی جمع می‌شود و بعد LayerNorm اعمال می‌شود. دو خط وسط کد دقیقاً همین است. اتصال باقیمانده باعث می‌شود گرادیان مسیر مستقیمی تا لایه‌های پایین داشته باشد. LayerNorm هم روی بعد ویژگیِ هر توکن نرمال می‌کند و به اندازه‌ی batch یا طول جمله وابسته نیست؛ به همین دلیل در ترنسفورمرها از آن استفاده می‌شود نه BatchNorm. Post-LN در شروع آموزش کمی ناپایدارتر از Pre-LN است، برای همین warmup نرخ یادگیری و gradient clipping گذاشتم. کلاس TransformerEncoder هم فقط این‌ها را به هم وصل می‌کند: امبدینگ، کدگذاری موقعیت و حلقه روی N لایه، و وزن‌های توجه هر لایه را هم در یک لیست نگه می‌دارد.</aside>
+</section>
+</div><div class="notes"><b>اسلاید 7 — لایه‌ی کدگذار: FFN، اتصال باقیمانده و LayerNorm</b><br>هر لایه‌ی کدگذار دو زیرلایه دارد. اولی همان توجه چندسر است. دومی شبکه‌ی پیش‌خور موقعیت‌به‌موقعیت است: دو لایه‌ی خطی که بردار هر توکن را جداگانه از ۱۲۸ به ۲۵۶ بعد می‌برند، GELU می‌زنند و به ۱۲۸ برمی‌گردانند. توجه فقط یک ترکیب خطی وزن‌دار از بردارهاست، پس غیرخطی بودن مدل از همین FFN می‌آید. دور هر زیرلایه یک اتصال باقیمانده و یک LayerNorm هست. من ساختار Post-LN مقاله‌ی اصلی را پیاده کردم: اول خروجی زیرلایه، بعد از dropout، با ورودی جمع می‌شود و بعد LayerNorm اعمال می‌شود. دو خط وسط کد دقیقاً همین است. اتصال باقیمانده باعث می‌شود گرادیان مسیر مستقیمی تا لایه‌های پایین داشته باشد. LayerNorm هم روی بعد ویژگیِ هر توکن نرمال می‌کند و به اندازه‌ی batch یا طول جمله وابسته نیست؛ به همین دلیل در ترنسفورمرها از آن استفاده می‌شود نه BatchNorm. Post-LN در شروع آموزش کمی ناپایدارتر از Pre-LN است، برای همین warmup نرخ یادگیری و gradient clipping گذاشتم. کلاس TransformerEncoder هم فقط این‌ها را به هم وصل می‌کند: امبدینگ، کدگذاری موقعیت و حلقه روی N لایه، و وزن‌های توجه هر لایه را هم در یک لیست نگه می‌دارد.</div></div><div class="wrap"><div class="frame"><section id="head" style="background:#F7F5F0;color:#16233A;font-family:'Vazirmatn', Tahoma, sans-serif;text-align:right;padding:128px 128px 160px;display:flex;flex-direction:column;gap:36px">
+<p style="font-size:24px;font-weight:700;color:#0E7C7B">&#8235;بخش ۳ · سر طبقه‌بندی</p>
+<h2 style="font-size:64px;font-weight:700;line-height:1.3">&#8235;از بردار توکن‌ها به برچسب خبر</h2>
+<div style="display:flex;flex-direction:row-reverse;gap:32px">
+<div style="flex:1;display:flex;flex-direction:column;gap:10px;background:#FFFFFF;border:2px solid #0E7C7B;border-radius:16px;padding:28px 32px">
+<h3 style="font-size:32px;font-weight:700;line-height:1.5;color:#0E7C7B">&#8235;[CLS] (استفاده‌شده)</h3>
+<p style="font-size:28px;line-height:1.7;color:#4A5568">&#8235;بردار موقعیت صفر در لایه‌ی آخر. خود مدل با توجه یاد می‌گیرد کدام کلمات مهم‌اند؛ برای تحلیل heatmap هم مناسب است.</p>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:10px;background:#FFFFFF;border:1px solid #E2DED5;border-radius:16px;padding:28px 32px">
+<h3 style="font-size:32px;font-weight:700;line-height:1.5">&#8235;Mean Pooling (پیاده‌شده)</h3>
+<p style="font-size:28px;line-height:1.7;color:#4A5568">&#8235;میانگین بردار همه‌ی توکن‌های غیرپدینگ؛ همه‌ی کلمات وزن برابر دارند. با CONFIG["pooling"] قابل انتخاب است.</p>
+</div>
+</div>
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;line-height:1.65;color:#E6EAF0;background:#16233A;border-radius:16px;padding:28px 32px;text-align:left;white-space:nowrap">def pool(self, h, key_mask):<br>&nbsp;&nbsp;if self.pooling == "cls":<br>&nbsp;&nbsp;&nbsp;&nbsp;return h[:, 0]&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; # (B, d_model)<br>&nbsp;&nbsp;m = key_mask.unsqueeze(-1).type_as(h)&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;# (B, T, 1)<br>&nbsp;&nbsp;return (h * m).sum(1) / m.sum(1).clamp(min=1.0)<br><br>def forward(self, input_ids, key_mask=None):<br>&nbsp;&nbsp;h, attentions = self.encoder(input_ids, key_mask)<br>&nbsp;&nbsp;return self.classifier(self.dropout(self.pool(h, key_mask)))</p>
+<p style="position:absolute;left:128px;bottom:64px;font-size:24px;color:#8A8F98">Transformer · AG News</p>
+<aside>خروجی کدگذار برای هر توکن یک بردار است، ولی برای طبقه‌بندی یک بردار برای کل جمله لازم داریم. صورت تمرین دو روش را مطرح کرده بود و من هر دو را پیاده کردم. روش اول استفاده از توکن CLS است: این توکن را اول هر جمله گذاشته‌ام و بردار خروجی‌اش در لایه‌ی آخر، یعنی h با اندیس صفر در بعد دوم، نماینده‌ی جمله است. چون CLS از طریق توجه به همه‌ی کلمات نگاه می‌کند، خودش یاد می‌گیرد اطلاعات کدام کلمات را جمع کند. روش دوم Mean Pooling است: میانگین بردارهای همه‌ی توکن‌ها، ولی باید پدینگ‌ها حساب نشوند؛ برای همین بردارها در ماسک ضرب می‌شوند، جمع می‌شوند و بر تعداد توکن‌های واقعی تقسیم می‌شوند. clamp هم جلوی تقسیم بر صفر را می‌گیرد. در اجرای نهایی از CLS استفاده کردم، چون برای بخش چهارم تمرین که تحلیل heatmap است، سطر CLS در ماتریس توجه مستقیماً نشان می‌دهد مدل برای تصمیم‌گیری به کدام کلمات نگاه کرده. بعد از pooling یک dropout و یک لایه‌ی خطی ۱۲۸ به ۴ داریم و تابع زیان Cross-Entropy است.</aside>
+</section>
+</div><div class="notes"><b>اسلاید 8 — از بردار توکن‌ها به برچسب خبر</b><br>خروجی کدگذار برای هر توکن یک بردار است، ولی برای طبقه‌بندی یک بردار برای کل جمله لازم داریم. صورت تمرین دو روش را مطرح کرده بود و من هر دو را پیاده کردم. روش اول استفاده از توکن CLS است: این توکن را اول هر جمله گذاشته‌ام و بردار خروجی‌اش در لایه‌ی آخر، یعنی h با اندیس صفر در بعد دوم، نماینده‌ی جمله است. چون CLS از طریق توجه به همه‌ی کلمات نگاه می‌کند، خودش یاد می‌گیرد اطلاعات کدام کلمات را جمع کند. روش دوم Mean Pooling است: میانگین بردارهای همه‌ی توکن‌ها، ولی باید پدینگ‌ها حساب نشوند؛ برای همین بردارها در ماسک ضرب می‌شوند، جمع می‌شوند و بر تعداد توکن‌های واقعی تقسیم می‌شوند. clamp هم جلوی تقسیم بر صفر را می‌گیرد. در اجرای نهایی از CLS استفاده کردم، چون برای بخش چهارم تمرین که تحلیل heatmap است، سطر CLS در ماتریس توجه مستقیماً نشان می‌دهد مدل برای تصمیم‌گیری به کدام کلمات نگاه کرده. بعد از pooling یک dropout و یک لایه‌ی خطی ۱۲۸ به ۴ داریم و تابع زیان Cross-Entropy است.</div></div><div class="wrap"><div class="frame"><section id="training" style="background:#F7F5F0;color:#16233A;font-family:'Vazirmatn', Tahoma, sans-serif;text-align:right;padding:128px 128px 160px;display:flex;flex-direction:column;gap:36px">
+<p style="font-size:24px;font-weight:700;color:#0E7C7B">&#8235;بخش ۴ · آموزش</p>
+<h2 style="font-size:64px;font-weight:700;line-height:1.3">&#8235;تنظیمات و حلقه‌ی آموزش</h2>
+<div style="display:flex;flex-direction:row-reverse;gap:40px;align-items:stretch">
+<table style="width:600px;font-size:28px;color:#16233A;background:#FFFFFF;border-radius:12px">
+<tr><th style="width:52%;text-align:left">مقدار</th><th style="width:48%;text-align:right">تنظیم</th></tr>
+<tr><td>AdamW, lr = 5e-4</td><td>&#8235;بهینه‌ساز</td></tr>
+<tr><td>0.01</td><td>Weight decay</td></tr>
+<tr><td>6% warmup + cosine</td><td>&#8235;زمان‌بند LR</td></tr>
+<tr><td>1.0</td><td>Grad clip</td></tr>
+<tr><td>64</td><td>Batch size</td></tr>
+<tr><td>6</td><td>&#8235;اپوک</td></tr>
+<tr><td>CrossEntropy</td><td>&#8235;تابع زیان</td></tr>
+</table>
+<p style="flex:1;font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;line-height:1.65;color:#E6EAF0;background:#16233A;border-radius:16px;padding:28px 32px;text-align:left;white-space:nowrap">def lr_lambda(step):<br>&nbsp;&nbsp;if step &lt; warmup_steps:<br>&nbsp;&nbsp;&nbsp;&nbsp;return (step + 1) / warmup_steps<br>&nbsp;&nbsp;progress = (step - warmup_steps) / (total_steps - warmup_steps)<br>&nbsp;&nbsp;return 0.5 * (1 + math.cos(math.pi * progress))<br><br># inside run_epoch (train=True)<br>logits = model(input_ids, key_mask)<br>loss = criterion(logits, labels)<br>optimizer.zero_grad()<br>loss.backward()<br>nn.utils.clip_grad_norm_(model.parameters(), 1.0)<br>optimizer.step()<br>scheduler.step()</p>
+</div>
+<p style="position:absolute;left:128px;bottom:64px;font-size:24px;color:#8A8F98">Transformer · AG News</p>
+<aside>برای آموزش از AdamW با نرخ یادگیری پنج ده‌هزارم و weight decay یک‌صدم استفاده کردم. نرخ یادگیری ثابت نیست: تابع lr_lambda در شش درصد اول گام‌ها نرخ را به‌صورت خطی از نزدیک صفر تا مقدار اصلی بالا می‌برد، که همان warmup است، و بعد با یک منحنی کسینوسی تا صفر پایین می‌آورد. warmup برای ترنسفورمر مهم است، مخصوصاً با ساختار Post-LN، چون در گام‌های اول وزن‌ها تصادفی‌اند و گرادیان‌ها بزرگ و پرنویزند و نرخ یادگیری بزرگ می‌تواند آموزش را خراب کند. زمان‌بند بعد از هر گام به‌روز می‌شود نه بعد از هر اپوک. در حلقه‌ی آموزش، بعد از backward، نرم گرادیان‌ها به حداکثر یک محدود می‌شود تا یک batch بد باعث جهش وزن‌ها نشود. هر اپوک ۱۷۸۲ گام است و روی CPU چهار هسته‌ای حدود شش و نیم دقیقه طول می‌کشد؛ کل شش اپوک حدود ۳۹ دقیقه. بعد از هر اپوک روی داده‌ی اعتبارسنجی ارزیابی می‌کنم و اگر دقت اعتبارسنجی بهتر شد وزن‌ها را ذخیره می‌کنم؛ ارزیابی نهایی روی تست با همین بهترین وزن‌ها انجام می‌شود.</aside>
+</section>
+</div><div class="notes"><b>اسلاید 9 — تنظیمات و حلقه‌ی آموزش</b><br>برای آموزش از AdamW با نرخ یادگیری پنج ده‌هزارم و weight decay یک‌صدم استفاده کردم. نرخ یادگیری ثابت نیست: تابع lr_lambda در شش درصد اول گام‌ها نرخ را به‌صورت خطی از نزدیک صفر تا مقدار اصلی بالا می‌برد، که همان warmup است، و بعد با یک منحنی کسینوسی تا صفر پایین می‌آورد. warmup برای ترنسفورمر مهم است، مخصوصاً با ساختار Post-LN، چون در گام‌های اول وزن‌ها تصادفی‌اند و گرادیان‌ها بزرگ و پرنویزند و نرخ یادگیری بزرگ می‌تواند آموزش را خراب کند. زمان‌بند بعد از هر گام به‌روز می‌شود نه بعد از هر اپوک. در حلقه‌ی آموزش، بعد از backward، نرم گرادیان‌ها به حداکثر یک محدود می‌شود تا یک batch بد باعث جهش وزن‌ها نشود. هر اپوک ۱۷۸۲ گام است و روی CPU چهار هسته‌ای حدود شش و نیم دقیقه طول می‌کشد؛ کل شش اپوک حدود ۳۹ دقیقه. بعد از هر اپوک روی داده‌ی اعتبارسنجی ارزیابی می‌کنم و اگر دقت اعتبارسنجی بهتر شد وزن‌ها را ذخیره می‌کنم؛ ارزیابی نهایی روی تست با همین بهترین وزن‌ها انجام می‌شود.</div></div><div class="wrap"><div class="frame"><section id="results" style="background:#F7F5F0;color:#16233A;font-family:'Vazirmatn', Tahoma, sans-serif;text-align:right;padding:128px 128px 160px;display:flex;flex-direction:column;gap:28px">
+<p style="font-size:24px;font-weight:700;color:#0E7C7B">&#8235;بخش ۵ · نتایج</p>
+<h2 style="font-size:64px;font-weight:700;line-height:1.3">&#8235;منحنی‌های همگرایی و نتایج Test</h2>
+<img src="../figures/training_curves.png" alt="منحنی Loss و Accuracy آموزش و اعتبارسنجی در ۶ اپوک" style="width:1664px;height:290px;object-fit:contain;background:#FFFFFF;border:1px solid #E2DED5;border-radius:16px">
+<div style="display:flex;flex-direction:row-reverse;gap:32px;align-items:center">
+<img src="../figures/confusion_matrix.png" alt="ماتریس درهم‌ریختگی روی داده‌ی تست" style="width:720px;height:281px;object-fit:contain;background:#FFFFFF;border:1px solid #E2DED5;border-radius:16px">
+<table style="flex:1;font-size:26px;color:#16233A;background:#FFFFFF;border-radius:12px">
+<tr><th style="width:22%">F1</th><th style="width:22%">Recall</th><th style="width:22%">Precision</th><th style="width:34%;text-align:left">Class</th></tr>
+<tr><td>0.902</td><td>0.889</td><td>0.915</td><td>World</td></tr>
+<tr><td>0.953</td><td>0.969</td><td>0.937</td><td>Sports</td></tr>
+<tr><td>0.860</td><td>0.856</td><td>0.865</td><td>Business</td></tr>
+<tr><td>0.877</td><td>0.878</td><td>0.875</td><td>Sci/Tech</td></tr>
+</table>
+</div>
+<p style="position:absolute;left:128px;bottom:64px;font-size:24px;color:#8A8F98">Transformer · AG News</p>
+<aside>نمودار بالا loss و دقت را در شش اپوک نشان می‌دهد. loss آموزش از ۰٫۷۵ به ۰٫۲۷ و loss اعتبارسنجی از ۰٫۴۳ به ۰٫۲۹ رسیده و بیشترین کاهش در دو اپوک اول است. بهترین دقت اعتبارسنجی ۹۰٫۵ درصد در اپوک پنجم بود و همان مدل ذخیره شد. یک نکته که ممکن است پرسیده شود: در اپوک‌های اول دقت اعتبارسنجی از آموزش بهتر است. دلیلش این است که dropout فقط در آموزش فعال است و معیار آموزش میانگین کل اپوک است، یعنی پیش‌بینی‌های مدلِ هنوز خام را هم شامل می‌شود. در پایان فاصله‌ی دقت آموزش و اعتبارسنجی خیلی کم است، پس بیش‌برازش قابل‌توجهی نداریم. دقت روی تست ۸۹٫۸ درصد است که به اعتبارسنجی خیلی نزدیک است. کلاس ورزش بهترین است با F1 برابر ۰٫۹۵، چون واژگانش خیلی متمایز است. بیشترین خطا بین اقتصاد و علم و فناوری است: ۱۸۰ خبر اقتصادی به اشتباه فناوری و ۱۳۶ خبر فناوری به اشتباه اقتصادی پیش‌بینی شده‌اند. بسیاری از این خبرها درباره‌ی شرکت‌های فناوری‌اند، مثل سود گوگل یا سهام مایکروسافت، و هر دو نوع واژه را دارند؛ حتی برچسب انسانی‌شان هم مبهم است.</aside>
+</section>
+</div><div class="notes"><b>اسلاید 10 — منحنی‌های همگرایی و نتایج Test</b><br>نمودار بالا loss و دقت را در شش اپوک نشان می‌دهد. loss آموزش از ۰٫۷۵ به ۰٫۲۷ و loss اعتبارسنجی از ۰٫۴۳ به ۰٫۲۹ رسیده و بیشترین کاهش در دو اپوک اول است. بهترین دقت اعتبارسنجی ۹۰٫۵ درصد در اپوک پنجم بود و همان مدل ذخیره شد. یک نکته که ممکن است پرسیده شود: در اپوک‌های اول دقت اعتبارسنجی از آموزش بهتر است. دلیلش این است که dropout فقط در آموزش فعال است و معیار آموزش میانگین کل اپوک است، یعنی پیش‌بینی‌های مدلِ هنوز خام را هم شامل می‌شود. در پایان فاصله‌ی دقت آموزش و اعتبارسنجی خیلی کم است، پس بیش‌برازش قابل‌توجهی نداریم. دقت روی تست ۸۹٫۸ درصد است که به اعتبارسنجی خیلی نزدیک است. کلاس ورزش بهترین است با F1 برابر ۰٫۹۵، چون واژگانش خیلی متمایز است. بیشترین خطا بین اقتصاد و علم و فناوری است: ۱۸۰ خبر اقتصادی به اشتباه فناوری و ۱۳۶ خبر فناوری به اشتباه اقتصادی پیش‌بینی شده‌اند. بسیاری از این خبرها درباره‌ی شرکت‌های فناوری‌اند، مثل سود گوگل یا سهام مایکروسافت، و هر دو نوع واژه را دارند؛ حتی برچسب انسانی‌شان هم مبهم است.</div></div><div class="wrap"><div class="frame"><section id="heatmap" style="background:#F7F5F0;color:#16233A;font-family:'Vazirmatn', Tahoma, sans-serif;text-align:right;padding:128px 128px 160px;display:flex;flex-direction:column;gap:32px">
+<p style="font-size:24px;font-weight:700;color:#0E7C7B">&#8235;بخش ۶ · تحلیل توجه</p>
+<h2 style="font-size:64px;font-weight:700;line-height:1.3">&#8235;[CLS] در لایه‌ی آخر به کدام کلمات نگاه می‌کند؟</h2>
+<div style="display:flex;flex-direction:row;gap:20px">
+<img src="../figures/attention_cls_sports.png" alt="توجه [CLS] به توکن‌های خبر ورزشی در چهار سر لایه‌ی آخر" style="width:910px;height:280px;object-fit:contain;background:#FFFFFF;border:1px solid #E2DED5;border-radius:12px">
+<img src="../figures/attention_cls_scitech.png" alt="توجه [CLS] به توکن‌های خبر فناوری در چهار سر لایه‌ی آخر" style="width:734px;height:280px;object-fit:contain;background:#FFFFFF;border:1px solid #E2DED5;border-radius:12px">
+</div>
+<div style="display:flex;flex-direction:row;gap:20px">
+<div style="width:910px;display:flex;flex-direction:column;gap:6px">
+<h3 style="font-size:32px;font-weight:700;line-height:1.5">&#8235;خبر ورزشی · Sports با p = 0.987</h3>
+<p style="font-size:28px;line-height:1.7;color:#4A5568">&#8235;سر ۱ روی دو تکرار yankees (0.36 و 0.33) و سر ۳ روی season (0.39) قفل شده است.</p>
+</div>
+<div style="width:734px;display:flex;flex-direction:column;gap:6px">
+<h3 style="font-size:32px;font-weight:700;line-height:1.5">&#8235;خبر فناوری · Sci/Tech با p = 0.986</h3>
+<p style="font-size:28px;line-height:1.7;color:#4A5568">&#8235;سر ۲ روی software و pc، سر ۱ روی users و wi، سر ۴ روی digital.</p>
+</div>
+</div>
+<p style="position:absolute;left:128px;bottom:64px;font-size:24px;color:#8A8F98">Transformer · AG News</p>
+<aside>بخش آخر تمرین این بود که وزن‌های توجه را رسم کنم و ببینم مدل به کلمات کلیدی توجه می‌کند یا نه. دو خبر از داده‌ی تست انتخاب کردم که هر دو درست طبقه‌بندی شده‌اند. چون طبقه‌بندی از روی بردار CLS انجام می‌شود، سطر CLS در ماتریس توجه لایه‌ی آخر را برای هر چهار سر رسم کردم؛ سطر پنجم میانگین سرهاست. خبر اول درباره‌ی جراحی موفق یک بازیکن تیم یانکیز است و مدل با اطمینان ۹۸٫۷ درصد آن را ورزشی تشخیص داده. سر اول تقریباً ۷۰ درصد توجهش را روی دو تکرار کلمه‌ی yankees گذاشته، یعنی مثل یک آشکارساز نام تیم عمل می‌کند، و سر سوم روی season قفل شده. نکته‌ی جالب این است که کلمات پزشکی مثل surgery و broken توجه کمی گرفته‌اند؛ مدل یاد گرفته نام تیم شاهد قوی‌تری است. خبر دوم درباره‌ی نرم‌افزار اسکایپ است: سر دوم روی دو تکرار software و pc تمرکز دارد، سر اول روی users و wi که بخشی از Wi-Fi است و سر چهارم روی digital و releases. پس پاسخ پرسش تمرین مثبت است و سرهای مختلف تخصص‌های متفاوتی پیدا کرده‌اند. البته باید بگویم وزن توجه توضیح کامل تصمیم مدل نیست، چون خروجی از W_o و FFN هم عبور می‌کند.</aside>
+</section>
+</div><div class="notes"><b>اسلاید 11 — [CLS] در لایه‌ی آخر به کدام کلمات نگاه می‌کند؟</b><br>بخش آخر تمرین این بود که وزن‌های توجه را رسم کنم و ببینم مدل به کلمات کلیدی توجه می‌کند یا نه. دو خبر از داده‌ی تست انتخاب کردم که هر دو درست طبقه‌بندی شده‌اند. چون طبقه‌بندی از روی بردار CLS انجام می‌شود، سطر CLS در ماتریس توجه لایه‌ی آخر را برای هر چهار سر رسم کردم؛ سطر پنجم میانگین سرهاست. خبر اول درباره‌ی جراحی موفق یک بازیکن تیم یانکیز است و مدل با اطمینان ۹۸٫۷ درصد آن را ورزشی تشخیص داده. سر اول تقریباً ۷۰ درصد توجهش را روی دو تکرار کلمه‌ی yankees گذاشته، یعنی مثل یک آشکارساز نام تیم عمل می‌کند، و سر سوم روی season قفل شده. نکته‌ی جالب این است که کلمات پزشکی مثل surgery و broken توجه کمی گرفته‌اند؛ مدل یاد گرفته نام تیم شاهد قوی‌تری است. خبر دوم درباره‌ی نرم‌افزار اسکایپ است: سر دوم روی دو تکرار software و pc تمرکز دارد، سر اول روی users و wi که بخشی از Wi-Fi است و سر چهارم روی digital و releases. پس پاسخ پرسش تمرین مثبت است و سرهای مختلف تخصص‌های متفاوتی پیدا کرده‌اند. البته باید بگویم وزن توجه توضیح کامل تصمیم مدل نیست، چون خروجی از W_o و FFN هم عبور می‌کند.</div></div><div class="wrap"><div class="frame"><section id="qa" style="background:#F7F5F0;color:#16233A;font-family:'Vazirmatn', Tahoma, sans-serif;text-align:right;padding:128px 128px 160px;display:flex;flex-direction:column;gap:36px">
+<p style="font-size:24px;font-weight:700;color:#0E7C7B">&#8235;آمادگی برای پرسش</p>
+<h2 style="font-size:64px;font-weight:700;line-height:1.3">&#8235;پرسش‌های احتمالی استاد</h2>
+<div style="display:grid;grid-template-columns:repeat(2, 1fr);gap:28px">
+<div style="display:flex;flex-direction:column;gap:8px;background:#FFFFFF;border:1px solid #E2DED5;border-radius:16px;padding:28px 32px">
+<h3 style="font-size:32px;font-weight:700;line-height:1.5">&#8235;چرا تقسیم بر √d_k؟</h3>
+<p style="font-size:28px;line-height:1.7;color:#4A5568">&#8235;تا واریانس امتیازها حدود ۱ بماند و softmax اشباع نشود.</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:8px;background:#FFFFFF;border:1px solid #E2DED5;border-radius:16px;padding:28px 32px">
+<h3 style="font-size:32px;font-weight:700;line-height:1.5">&#8235;چرا LayerNorm و نه BatchNorm؟</h3>
+<p style="font-size:28px;line-height:1.7;color:#4A5568">&#8235;به اندازه‌ی batch و طول متغیر جمله‌ها وابسته نیست.</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:8px;background:#FFFFFF;border:1px solid #E2DED5;border-radius:16px;padding:28px 32px">
+<h3 style="font-size:32px;font-weight:700;line-height:1.5">&#8235;چرا contiguous قبل از view؟</h3>
+<p style="font-size:28px;line-height:1.7;color:#4A5568">&#8235;transpose فقط نما را عوض می‌کند؛ view حافظه‌ی پیوسته می‌خواهد.</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:8px;background:#FFFFFF;border:1px solid #E2DED5;border-radius:16px;padding:28px 32px">
+<h3 style="font-size:32px;font-weight:700;line-height:1.5">&#8235;از کجا معلوم ماژول آماده استفاده نشده؟</h3>
+<p style="font-size:28px;line-height:1.7;color:#4A5568">&#8235;assert روی model.modules() که هیچ ماژول ممنوعه‌ای در مدل نیست.</p>
+</div>
+</div>
+<p style="position:absolute;left:128px;bottom:64px;font-size:24px;color:#8A8F98">Transformer · AG News</p>
+<aside>این اسلاید برای آمادگی خودم است. تقسیم بر جذر d_k: ضرب داخلی دو بردار d_k بعدی واریانسی متناسب با d_k دارد؛ بدون تقسیم، softmax اشباع می‌شود و گرادیان تقریباً صفر می‌شود. LayerNorm به جای BatchNorm: LayerNorm برای هر توکن جدا و روی بعد ویژگی نرمال می‌کند، پس به اندازه‌ی batch و طول متفاوت جمله‌ها و پدینگ وابسته نیست. contiguous: بعد از transpose داده در حافظه جابه‌جا نمی‌شود و فقط ترتیب خواندن عوض می‌شود؛ view به حافظه‌ی پیوسته نیاز دارد. اثبات نبودن ماژول آماده: در سلول ساخت مدل روی همه‌ی زیرماژول‌ها حلقه می‌زنم و assert می‌کنم که هیچ‌کدام از نوع MultiheadAttention یا TransformerEncoder نیستند. چند پرسش دیگر: چرا Encoder و نه Decoder؟ چون طبقه‌بندی است و تولید متن نداریم؛ ماسک آینده هم لازم نیست و فقط ماسک پدینگ داریم. پیچیدگی توجه؟ مرتبه‌ی T به توان دو در d. تعداد پارامتر یک لایه‌ی کدگذار؟ چهار لایه‌ی خطی ۱۲۸ در ۱۲۸ برای توجه، حدود ۶۶ هزار؛ FFN حدود ۶۶ هزار؛ دو LayerNorm حدود ۵۰۰؛ روی هم حدود ۱۳۲ هزار برای هر لایه. چرا GELU؟ نرم‌تر از ReLU است و در ترنسفورمرهای جدید رایج است. چرا warmup؟ برای پایداری Post-LN در شروع آموزش.</aside>
+</section>
+</div><div class="notes"><b>اسلاید 12 — پرسش‌های احتمالی استاد</b><br>این اسلاید برای آمادگی خودم است. تقسیم بر جذر d_k: ضرب داخلی دو بردار d_k بعدی واریانسی متناسب با d_k دارد؛ بدون تقسیم، softmax اشباع می‌شود و گرادیان تقریباً صفر می‌شود. LayerNorm به جای BatchNorm: LayerNorm برای هر توکن جدا و روی بعد ویژگی نرمال می‌کند، پس به اندازه‌ی batch و طول متفاوت جمله‌ها و پدینگ وابسته نیست. contiguous: بعد از transpose داده در حافظه جابه‌جا نمی‌شود و فقط ترتیب خواندن عوض می‌شود؛ view به حافظه‌ی پیوسته نیاز دارد. اثبات نبودن ماژول آماده: در سلول ساخت مدل روی همه‌ی زیرماژول‌ها حلقه می‌زنم و assert می‌کنم که هیچ‌کدام از نوع MultiheadAttention یا TransformerEncoder نیستند. چند پرسش دیگر: چرا Encoder و نه Decoder؟ چون طبقه‌بندی است و تولید متن نداریم؛ ماسک آینده هم لازم نیست و فقط ماسک پدینگ داریم. پیچیدگی توجه؟ مرتبه‌ی T به توان دو در d. تعداد پارامتر یک لایه‌ی کدگذار؟ چهار لایه‌ی خطی ۱۲۸ در ۱۲۸ برای توجه، حدود ۶۶ هزار؛ FFN حدود ۶۶ هزار؛ دو LayerNorm حدود ۵۰۰؛ روی هم حدود ۱۳۲ هزار برای هر لایه. چرا GELU؟ نرم‌تر از ReLU است و در ترنسفورمرهای جدید رایج است. چرا warmup؟ برای پایداری Post-LN در شروع آموزش.</div></div><div class="wrap"><div class="frame"><section id="summary" style="background:#16233A;color:#F7F5F0;font-family:'Vazirmatn', Tahoma, sans-serif;text-align:right;padding:128px;display:flex;flex-direction:column;gap:40px">
+<p style="font-size:28px;font-weight:700;color:#F2B544">&#8235;جمع‌بندی</p>
+<h2 style="font-size:64px;font-weight:700;line-height:1.4">&#8235;یک کدگذار دو لایه‌ای که از صفر نوشته شده، بدون پیش‌آموزش به 89.8% می‌رسد</h2>
+<div style="flex:1"></div>
+<div style="display:flex;flex-direction:row-reverse;gap:32px">
+<div style="flex:1;display:flex;flex-direction:column;gap:8px;border-top:2px solid #F2B544;padding:24px 0 0 0">
+<h3 style="font-size:32px;font-weight:700;line-height:1.5">&#8235;پیاده‌سازی</h3>
+<p style="font-size:28px;line-height:1.7;color:#C9D3E0">&#8235;هفت کلاس مجزا؛ ابعاد و ماسک با assert بررسی شده‌اند.</p>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:8px;border-top:2px solid #F2B544;padding:24px 0 0 0">
+<h3 style="font-size:32px;font-weight:700;line-height:1.5">&#8235;خطا</h3>
+<p style="font-size:28px;line-height:1.7;color:#C9D3E0">&#8235;بیشتر بین Business و Sci/Tech؛ خبرهای شرکت‌های فناوری.</p>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:8px;border-top:2px solid #F2B544;padding:24px 0 0 0">
+<h3 style="font-size:32px;font-weight:700;line-height:1.5">&#8235;توجه</h3>
+<p style="font-size:28px;line-height:1.7;color:#C9D3E0">&#8235;[CLS] روی کلمات کلیدی تمرکز می‌کند و سرها تخصص متفاوت دارند.</p>
+</div>
+</div>
+<aside>جمع‌بندی می‌کنم. همه‌ی اجزای Transformer Encoder را در هفت کلاس مجزا و فقط با لایه‌های پایه نوشتم و درستی ابعاد، جمع سطرهای توجه و صفر بودن توجه به پدینگ را با assert نشان دادم. مدل با دو لایه و چهار سر، بدون هیچ پیش‌آموزشی و در حدود چهل دقیقه روی CPU، به دقت ۸۹٫۸ درصد روی تست رسید. خطاهای اصلی بین کلاس اقتصاد و علم و فناوری است که ذاتاً هم‌پوشانی دارند. تحلیل heatmap نشان داد توکن CLS واقعاً به کلمات کلیدی مثل نام تیم یا واژه‌های فناوری توجه می‌کند و سرهای مختلف نقش‌های متفاوتی گرفته‌اند. برای بهتر شدن نتیجه می‌شود از توکنایزر زیرکلمه‌ای استفاده کرد تا کلمات کم‌تکرار مثل Skype بهتر نمایش داده شوند، یا مدل را بزرگ‌تر کرد و بیشتر آموزش داد. ممنون از توجه‌تان.</aside>
+</section>
+</div><div class="notes"><b>اسلاید 13 — یک کدگذار دو لایه‌ای که از صفر نوشته شده، بدون پیش‌آموزش به 89.8% می‌رسد</b><br>جمع‌بندی می‌کنم. همه‌ی اجزای Transformer Encoder را در هفت کلاس مجزا و فقط با لایه‌های پایه نوشتم و درستی ابعاد، جمع سطرهای توجه و صفر بودن توجه به پدینگ را با assert نشان دادم. مدل با دو لایه و چهار سر، بدون هیچ پیش‌آموزشی و در حدود چهل دقیقه روی CPU، به دقت ۸۹٫۸ درصد روی تست رسید. خطاهای اصلی بین کلاس اقتصاد و علم و فناوری است که ذاتاً هم‌پوشانی دارند. تحلیل heatmap نشان داد توکن CLS واقعاً به کلمات کلیدی مثل نام تیم یا واژه‌های فناوری توجه می‌کند و سرهای مختلف نقش‌های متفاوتی گرفته‌اند. برای بهتر شدن نتیجه می‌شود از توکنایزر زیرکلمه‌ای استفاده کرد تا کلمات کم‌تکرار مثل Skype بهتر نمایش داده شوند، یا مدل را بزرگ‌تر کرد و بیشتر آموزش داد. ممنون از توجه‌تان.</div></div><script>function fit(){document.querySelectorAll('.frame').forEach(f=>{f.firstElementChild.style.transform='scale('+(f.clientWidth/1920)+')'})}
+addEventListener('resize',fit);addEventListener('load',fit);fit();</script></body></html>

@@ -1,0 +1,20 @@
+<section id="summary" style="background:#16233A;color:#F7F5F0;font-family:'Vazirmatn', Tahoma, sans-serif;text-align:right;padding:128px;display:flex;flex-direction:column;gap:40px">
+<p style="font-size:28px;font-weight:700;color:#F2B544">&#8235;جمع‌بندی</p>
+<h2 style="font-size:64px;font-weight:700;line-height:1.4">&#8235;یک کدگذار دو لایه‌ای که از صفر نوشته شده، بدون پیش‌آموزش به 89.8% می‌رسد</h2>
+<div style="flex:1"></div>
+<div style="display:flex;flex-direction:row-reverse;gap:32px">
+<div style="flex:1;display:flex;flex-direction:column;gap:8px;border-top:2px solid #F2B544;padding:24px 0 0 0">
+<h3 style="font-size:32px;font-weight:700;line-height:1.5">&#8235;پیاده‌سازی</h3>
+<p style="font-size:28px;line-height:1.7;color:#C9D3E0">&#8235;هفت کلاس مجزا؛ ابعاد و ماسک با assert بررسی شده‌اند.</p>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:8px;border-top:2px solid #F2B544;padding:24px 0 0 0">
+<h3 style="font-size:32px;font-weight:700;line-height:1.5">&#8235;خطا</h3>
+<p style="font-size:28px;line-height:1.7;color:#C9D3E0">&#8235;بیشتر بین Business و Sci/Tech؛ خبرهای شرکت‌های فناوری.</p>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:8px;border-top:2px solid #F2B544;padding:24px 0 0 0">
+<h3 style="font-size:32px;font-weight:700;line-height:1.5">&#8235;توجه</h3>
+<p style="font-size:28px;line-height:1.7;color:#C9D3E0">&#8235;[CLS] روی کلمات کلیدی تمرکز می‌کند و سرها تخصص متفاوت دارند.</p>
+</div>
+</div>
+<aside>جمع‌بندی می‌کنم. همه‌ی اجزای Transformer Encoder را در هفت کلاس مجزا و فقط با لایه‌های پایه نوشتم و درستی ابعاد، جمع سطرهای توجه و صفر بودن توجه به پدینگ را با assert نشان دادم. مدل با دو لایه و چهار سر، بدون هیچ پیش‌آموزشی و در حدود چهل دقیقه روی CPU، به دقت ۸۹٫۸ درصد روی تست رسید. خطاهای اصلی بین کلاس اقتصاد و علم و فناوری است که ذاتاً هم‌پوشانی دارند. تحلیل heatmap نشان داد توکن CLS واقعاً به کلمات کلیدی مثل نام تیم یا واژه‌های فناوری توجه می‌کند و سرهای مختلف نقش‌های متفاوتی گرفته‌اند. برای بهتر شدن نتیجه می‌شود از توکنایزر زیرکلمه‌ای استفاده کرد تا کلمات کم‌تکرار مثل Skype بهتر نمایش داده شوند، یا مدل را بزرگ‌تر کرد و بیشتر آموزش داد. ممنون از توجه‌تان.</aside>
+</section>

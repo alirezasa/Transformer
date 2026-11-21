@@ -1,0 +1,17 @@
+<section id="head" style="background:#F7F5F0;color:#16233A;font-family:'Vazirmatn', Tahoma, sans-serif;text-align:right;padding:128px 128px 160px;display:flex;flex-direction:column;gap:36px">
+<p style="font-size:24px;font-weight:700;color:#0E7C7B">&#8235;بخش ۳ · سر طبقه‌بندی</p>
+<h2 style="font-size:64px;font-weight:700;line-height:1.3">&#8235;از بردار توکن‌ها به برچسب خبر</h2>
+<div style="display:flex;flex-direction:row-reverse;gap:32px">
+<div style="flex:1;display:flex;flex-direction:column;gap:10px;background:#FFFFFF;border:2px solid #0E7C7B;border-radius:16px;padding:28px 32px">
+<h3 style="font-size:32px;font-weight:700;line-height:1.5;color:#0E7C7B">&#8235;[CLS] (استفاده‌شده)</h3>
+<p style="font-size:28px;line-height:1.7;color:#4A5568">&#8235;بردار موقعیت صفر در لایه‌ی آخر. خود مدل با توجه یاد می‌گیرد کدام کلمات مهم‌اند؛ برای تحلیل heatmap هم مناسب است.</p>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:10px;background:#FFFFFF;border:1px solid #E2DED5;border-radius:16px;padding:28px 32px">
+<h3 style="font-size:32px;font-weight:700;line-height:1.5">&#8235;Mean Pooling (پیاده‌شده)</h3>
+<p style="font-size:28px;line-height:1.7;color:#4A5568">&#8235;میانگین بردار همه‌ی توکن‌های غیرپدینگ؛ همه‌ی کلمات وزن برابر دارند. با CONFIG["pooling"] قابل انتخاب است.</p>
+</div>
+</div>
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;line-height:1.65;color:#E6EAF0;background:#16233A;border-radius:16px;padding:28px 32px;text-align:left;white-space:nowrap">def pool(self, h, key_mask):<br>&nbsp;&nbsp;if self.pooling == "cls":<br>&nbsp;&nbsp;&nbsp;&nbsp;return h[:, 0]&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; # (B, d_model)<br>&nbsp;&nbsp;m = key_mask.unsqueeze(-1).type_as(h)&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;# (B, T, 1)<br>&nbsp;&nbsp;return (h * m).sum(1) / m.sum(1).clamp(min=1.0)<br><br>def forward(self, input_ids, key_mask=None):<br>&nbsp;&nbsp;h, attentions = self.encoder(input_ids, key_mask)<br>&nbsp;&nbsp;return self.classifier(self.dropout(self.pool(h, key_mask)))</p>
+<p style="position:absolute;left:128px;bottom:64px;font-size:24px;color:#8A8F98">Transformer · AG News</p>
+<aside>خروجی کدگذار برای هر توکن یک بردار است، ولی برای طبقه‌بندی یک بردار برای کل جمله لازم داریم. صورت تمرین دو روش را مطرح کرده بود و من هر دو را پیاده کردم. روش اول استفاده از توکن CLS است: این توکن را اول هر جمله گذاشته‌ام و بردار خروجی‌اش در لایه‌ی آخر، یعنی h با اندیس صفر در بعد دوم، نماینده‌ی جمله است. چون CLS از طریق توجه به همه‌ی کلمات نگاه می‌کند، خودش یاد می‌گیرد اطلاعات کدام کلمات را جمع کند. روش دوم Mean Pooling است: میانگین بردارهای همه‌ی توکن‌ها، ولی باید پدینگ‌ها حساب نشوند؛ برای همین بردارها در ماسک ضرب می‌شوند، جمع می‌شوند و بر تعداد توکن‌های واقعی تقسیم می‌شوند. clamp هم جلوی تقسیم بر صفر را می‌گیرد. در اجرای نهایی از CLS استفاده کردم، چون برای بخش چهارم تمرین که تحلیل heatmap است، سطر CLS در ماتریس توجه مستقیماً نشان می‌دهد مدل برای تصمیم‌گیری به کدام کلمات نگاه کرده. بعد از pooling یک dropout و یک لایه‌ی خطی ۱۲۸ به ۴ داریم و تابع زیان Cross-Entropy است.</aside>
+</section>
